@@ -1,0 +1,58 @@
+# HomeEdu
+
+HomeEdu — веб-приложение для семейного образования. Первый пилот рассчитан на Сару (6 класс) и Давида (4 класс).
+
+## Стек
+
+- React, TypeScript, Vite;
+- Tailwind CSS, shadcn/ui, Radix UI;
+- PHP REST API;
+- MySQL;
+- Vitest и Playwright.
+
+## Локальный запуск frontend
+
+```bash
+npm install
+npm run dev
+```
+
+## Локальный запуск API
+
+Нужны PHP 8.2 или новее и MySQL 8.
+
+```bash
+cp apps/api/.env.example apps/api/.env
+php apps/api/bin/migrate.php
+php -S 127.0.0.1:8080 -t apps/api/public
+```
+
+Проверка API: `GET http://127.0.0.1:8080/api/v1/health`.
+
+Frontend обращается к API по пути `/api/v1`. В production web-сервер должен отдавать собранный `apps/web/dist` и проксировать `/api/v1/*` в `apps/api/public/index.php`. Для локальной совместной разработки укажите такой же reverse proxy либо запускайте frontend через конфигурацию сервера.
+
+После миграции откройте `/setup`, создайте первое семейное пространство с ключом `APP_SETUP_TOKEN`, затем добавьте Сару (6 класс) и Давида (4 класс) с отдельными PIN-кодами.
+
+## Проверки
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run check:php
+npm run build
+```
+
+После запуска API на чистой тестовой базе полный сценарий авторизации можно проверить командой:
+
+```bash
+HOMEEDU_SETUP_TOKEN=development-setup-token npm run test:api:integration
+```
+
+## Документация
+
+- `docs/PROJECT_VISION.md` — продуктовая концепция;
+- `docs/ROAD_MAP.md` — этапы реализации и критерии готовности.
+- `docs/api-contract.md` — контракт текущих API-маршрутов;
+- `docs/data-model.md` — модель данных и инварианты доступа;
+- `docs/IMPLEMENTATION_STATUS.md` — фактическое состояние реализации.

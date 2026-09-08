@@ -1,0 +1,23 @@
+{
+  "name": "homeedu",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@homeedu/web",
+    "build": "npm run build --workspace=@homeedu/web",
+    "lint": "npm run lint --workspace=@homeedu/web",
+    "typecheck": "npm run typecheck --workspace=@homeedu/web",
+    "test": "npm run test --workspace=@homeedu/web",
+    "test:api:integration": "node scripts/integration-api.mjs",
+    "check:php": "node scripts/check-php-syntax.mjs"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "devDependencies": {
+    "php-parser": "^3.7.0"
+  }
+}
