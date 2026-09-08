@@ -27,6 +27,8 @@ input:focus, select:focus { outline: 3px solid #bfdbfe; border-color: #2563eb; }
 .account { margin-top: auto; padding: 16px 10px 0; display: grid; gap: 4px; border-top: 1px solid #314476; }
 .account small { margin-bottom: 10px; color: #aebcdc; }
 .button-secondary { background: #30477e; }
+.button-danger { background: #b42318; }
+.button-danger:hover { background: #912018; }
 main { width: 100%; max-width: 1180px; margin: 0 auto; padding: 40px; }
 h1, h2, p { margin-top: 0; }
 h1 { margin-bottom: 7px; font-size: clamp(2rem, 5vw, 2.5rem); letter-spacing: -.045em; }
@@ -75,10 +77,21 @@ h2 { margin-bottom: 4px; }
 .tree-list, .topic-list { display: grid; gap: 12px; }
 .tree-section { padding: 16px; border: 1px solid #e4e7ec; border-radius: 13px; background: #fbfcfe; }
 .tree-section h3 { margin: 0 0 12px; }
+.node-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.node-heading h3 { margin: 0; }
+.node-actions { display: flex; gap: 5px; }
+.icon-button { width: 30px; min-height: 30px; padding: 2px; border: 1px solid #d0d5dd; background: white; color: #475467; font-size: 1rem; }
+.icon-button:hover { background: #f2f4f7; }
+.icon-danger { color: #b42318; }
 .tree-topic { padding: 12px; border-left: 3px solid #bfdbfe; background: white; }
 .tree-topic ol { margin: 10px 0; padding-left: 24px; }
 .tree-topic li { margin-bottom: 7px; padding-left: 4px; }
 .tree-topic li small { margin-left: 10px; color: #697586; }
+.lesson-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; }
+.lesson-row small { margin: 0; }
+.node-edit, .delete-confirm { width: 100%; margin: 8px 0; display: grid; grid-template-columns: minmax(180px, 1fr) auto auto; align-items: center; gap: 8px; }
+.node-edit .form-error, .delete-confirm .form-error { grid-column: 1 / -1; }
+.delete-confirm { padding: 10px; border-radius: 10px; background: #fff1f0; }
 .inline-create { margin-top: 12px; display: grid; grid-template-columns: minmax(180px, 1fr) auto auto; gap: 8px; }
 .inline-create .form-error { grid-column: 1 / -1; }
 @media (max-width: 760px) {
@@ -97,4 +110,8 @@ h2 { margin-bottom: 4px; }
   .card-actions, .subject-toolbar { grid-template-columns: 1fr; }
   .subject-toolbar form, .inline-create { grid-template-columns: 1fr; }
   .inline-create .form-error { grid-column: auto; }
+  .lesson-row { grid-template-columns: 1fr auto; }
+  .lesson-row small { grid-row: 2; }
+  .node-edit, .delete-confirm { grid-template-columns: 1fr; }
+  .node-edit .form-error, .delete-confirm .form-error { grid-column: auto; }
 }

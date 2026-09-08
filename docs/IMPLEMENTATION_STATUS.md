@@ -48,7 +48,9 @@
 - [x] create curriculum and assign existing or custom subjects
 - [x] nested section, topic and lesson creation UI
 - [x] responsive ordered curriculum tree
-- [ ] editing and deleting curriculum nodes in the UI
+- [x] editing sections, topics and lessons in the UI
+- [x] two-step soft-delete flow for curriculum nodes
+- [ ] lesson block editor
 
 ## Следующая задача
 

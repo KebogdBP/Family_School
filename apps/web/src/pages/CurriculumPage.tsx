@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { NavLink, useParams } from 'react-router-dom'
 import {
   attachSubject, createCurriculum, createLesson, createSection, createSubject, createTopic,
-  getCurricula, getCurriculum, getSubjects, type CurriculumTree,
+  deleteCurriculumNode, getCurricula, getCurriculum, getSubjects, updateCurriculumNode,
+  type CurriculumNodeType, type CurriculumTree,
 } from '@/entities/curriculum/api'
 import { getStudents } from '@/entities/student/api'
 
@@ -22,6 +23,33 @@ function AddNodeForm({ label, placeholder, onAdd }: { label: string; placeholder
     <button type="button" className="button-ghost" onClick={() => setOpen(false)}>Отмена</button>
     <ErrorText error={mutation.error} />
   </form>
+}
+
+function NodeActions({ type, id, title, position, summary, onChanged }: {
+  type: CurriculumNodeType
+  id: string
+  title: string
+  position: number
+  summary?: string | null
+  onChanged: () => Promise<unknown>
+}) {
+  const [mode, setMode] = useState<'idle' | 'edit' | 'delete'>('idle')
+  const [value, setValue] = useState(title)
+  const update = useMutation({
+    mutationFn: () => updateCurriculumNode(type, id, {
+      title: value,
+      position,
+      ...(type === 'lessons' ? { summary: summary ?? '' } : { description: '' }),
+    }),
+    onSuccess: async () => { setMode('idle'); await onChanged() },
+  })
+  const remove = useMutation({
+    mutationFn: () => deleteCurriculumNode(type, id),
+    onSuccess: onChanged,
+  })
+  if (mode === 'edit') return <form className="node-edit" onSubmit={(event) => { event.preventDefault(); update.mutate() }}><input aria-label="Новое название" autoFocus required maxLength={180} value={value} onChange={(event) => setValue(event.target.value)} /><button disabled={update.isPending}>Сохранить</button><button type="button" className="button-ghost" onClick={() => { setValue(title); setMode('idle') }}>Отмена</button><ErrorText error={update.error} /></form>
+  if (mode === 'delete') return <div className="delete-confirm"><span>Удалить «{title}»?</span><button className="button-danger" disabled={remove.isPending} onClick={() => remove.mutate()}>Да, удалить</button><button className="button-ghost" onClick={() => setMode('idle')}>Отмена</button><ErrorText error={remove.error} /></div>
+  return <div className="node-actions"><button className="icon-button" aria-label={`Редактировать ${title}`} title="Редактировать" onClick={() => setMode('edit')}>✎</button><button className="icon-button icon-danger" aria-label={`Удалить ${title}`} title="Удалить" onClick={() => setMode('delete')}>×</button></div>
 }
 
 function CurriculumCreator({ studentId, grade }: { studentId: string; grade: number }) {
@@ -58,7 +86,7 @@ function ProgramTree({ tree }: { tree: CurriculumTree }) {
   const client = useQueryClient()
   const refresh = async () => { await client.invalidateQueries({ queryKey: ['curriculum', tree.id] }) }
   if (tree.subjects.length === 0) return <div className="card empty"><h2>В программе пока нет предметов</h2><p className="muted">Добавьте первый предмет выше.</p></div>
-  return <section className="program-tree">{tree.subjects.map((subject) => <article className="subject-card card" key={subject.assignmentId} style={{ borderTopColor: subject.color }}><header><div className="subject-dot" style={{ background: subject.color }} /><h2>{subject.title}</h2></header><div className="tree-list">{subject.sections.map((section) => <section className="tree-section" key={section.id}><h3>{section.title}</h3><div className="topic-list">{section.topics.map((topic) => <div className="tree-topic" key={topic.id}><strong>{topic.title}</strong><ol>{topic.lessons.map((lesson) => <li key={lesson.id}><span>{lesson.title}</span><small>{lesson.status === 'draft' ? 'Черновик' : 'Опубликован'}</small></li>)}</ol><AddNodeForm label="урок" placeholder="Название урока" onAdd={async (title) => { await createLesson(topic.id, title, topic.lessons.length); await refresh() }} /></div>)}</div><AddNodeForm label="тему" placeholder="Название темы" onAdd={async (title) => { await createTopic(section.id, title, section.topics.length); await refresh() }} /></section>)}</div><AddNodeForm label="раздел" placeholder="Название раздела" onAdd={async (title) => { await createSection(subject.assignmentId, title, subject.sections.length); await refresh() }} /></article>)}</section>
+  return <section className="program-tree">{tree.subjects.map((subject) => <article className="subject-card card" key={subject.assignmentId} style={{ borderTopColor: subject.color }}><header><div className="subject-dot" style={{ background: subject.color }} /><h2>{subject.title}</h2></header><div className="tree-list">{subject.sections.map((section) => <section className="tree-section" key={section.id}><div className="node-heading"><h3>{section.title}</h3><NodeActions type="sections" id={section.id} title={section.title} position={section.position} onChanged={refresh} /></div><div className="topic-list">{section.topics.map((topic) => <div className="tree-topic" key={topic.id}><div className="node-heading"><strong>{topic.title}</strong><NodeActions type="topics" id={topic.id} title={topic.title} position={topic.position} onChanged={refresh} /></div><ol>{topic.lessons.map((lesson) => <li key={lesson.id}><div className="lesson-row"><span>{lesson.title}</span><small>{lesson.status === 'draft' ? 'Черновик' : 'Опубликован'}</small><NodeActions type="lessons" id={lesson.id} title={lesson.title} position={lesson.position} summary={lesson.summary} onChanged={refresh} /></div></li>)}</ol><AddNodeForm label="урок" placeholder="Название урока" onAdd={async (title) => { await createLesson(topic.id, title, topic.lessons.length); await refresh() }} /></div>)}</div><AddNodeForm label="тему" placeholder="Название темы" onAdd={async (title) => { await createTopic(section.id, title, section.topics.length); await refresh() }} /></section>)}</div><AddNodeForm label="раздел" placeholder="Название раздела" onAdd={async (title) => { await createSection(subject.assignmentId, title, subject.sections.length); await refresh() }} /></article>)}</section>
 }
 
 export function CurriculumPage() {

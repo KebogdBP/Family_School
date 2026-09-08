@@ -24,3 +24,14 @@ export const createTopic = (sectionId: string, title: string, position: number) 
   api(`/sections/${sectionId}/topics`, { method: 'POST', body: JSON.stringify({ title, position }) })
 export const createLesson = (topicId: string, title: string, position: number) =>
   api(`/topics/${topicId}/lessons`, { method: 'POST', body: JSON.stringify({ title, position }) })
+
+export type CurriculumNodeType = 'sections' | 'topics' | 'lessons'
+
+export const updateCurriculumNode = (
+  type: CurriculumNodeType,
+  id: string,
+  input: { title: string; position: number; description?: string; summary?: string },
+) => api<{ status: string }>(`/${type}/${id}`, { method: 'PATCH', body: JSON.stringify(input) })
+
+export const deleteCurriculumNode = (type: CurriculumNodeType, id: string) =>
+  api<{ status: string }>(`/${type}/${id}`, { method: 'DELETE' })
