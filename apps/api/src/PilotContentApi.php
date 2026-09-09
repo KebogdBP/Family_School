@@ -8,20 +8,29 @@ use PDO;
 
 final class PilotContentApi
 {
-    private const ROUTE='david-fractions-grade-4-v1';
-
     public static function installDavidFractions(PDO $db,string $studentId): never
+    {
+        self::install($db,$studentId,4,'david-fractions-grade-4-v1','Дроби','Пилотный маршрут: от части целого к простым действиям с дробями.',self::davidDefinitions());
+    }
+
+    public static function installSaraFractions(PDO $db,string $studentId): never
+    {
+        self::install($db,$studentId,6,'sara-common-fractions-grade-6-v1','Обыкновенные дроби','Пилотный маршрут: общий знаменатель, сравнение, сложение и вычитание дробей.',self::saraDefinitions());
+    }
+
+    /** @param array<int,array<string,mixed>> $definitions */
+    private static function install(PDO $db,string $studentId,int $grade,string $routeCode,string $sectionTitle,string $sectionDescription,array $definitions): never
     {
         $session=Auth::requireRole($db,'parent');$familyId=(string)$session['family_id'];$actorId=(string)$session['user_id'];
         $student=self::one($db,'SELECT id,display_name,grade FROM students WHERE id=:id AND family_id=:family_id AND deleted_at IS NULL',['id'=>$studentId,'family_id'=>$familyId]);
-        if(!$student)Http::error('not_found','Ученик не найден',404);if((int)$student['grade']!==4)Http::error('wrong_grade','Этот маршрут предназначен для 4 класса',409);
-        $existing=self::one($db,'SELECT curriculum_id FROM pilot_content_installs WHERE student_id=:student_id AND route_code=:route',['student_id'=>$studentId,'route'=>self::ROUTE]);
-        if($existing)Http::json(['installed'=>false,'alreadyInstalled'=>true,'curriculumId'=>$existing['curriculum_id'],'routeCode'=>self::ROUTE]);
+        if(!$student)Http::error('not_found','Ученик не найден',404);if((int)$student['grade']!==$grade)Http::error('wrong_grade',"Этот маршрут предназначен для $grade класса",409);
+        $existing=self::one($db,'SELECT curriculum_id FROM pilot_content_installs WHERE student_id=:student_id AND route_code=:route',['student_id'=>$studentId,'route'=>$routeCode]);
+        if($existing)Http::json(['installed'=>false,'alreadyInstalled'=>true,'curriculumId'=>$existing['curriculum_id'],'routeCode'=>$routeCode]);
         $db->beginTransaction();
         try{
-            $subjectId=self::subject($db,$familyId);$curriculumId=self::curriculum($db,$familyId,$studentId);$assignmentId=self::assignment($db,$familyId,$curriculumId,$subjectId);
-            $sectionId=self::insert($db,'INSERT INTO sections(id,family_id,curriculum_subject_id,title,description,position) VALUES(:id,:family_id,:parent,:title,:description,0)',['family_id'=>$familyId,'parent'=>$assignmentId,'title'=>'Дроби','description'=>'Пилотный маршрут: от части целого к простым действиям с дробями.']);
-            $definitions=self::definitions();$previousCompetency=null;$counts=['topics'=>0,'lessons'=>0,'competencies'=>0,'quizzes'=>0,'homeworks'=>0];
+            $subjectId=self::subject($db,$familyId);$curriculumId=self::curriculum($db,$familyId,$studentId,$grade);$assignmentId=self::assignment($db,$familyId,$curriculumId,$subjectId);
+            $sectionId=self::insert($db,'INSERT INTO sections(id,family_id,curriculum_subject_id,title,description,position) VALUES(:id,:family_id,:parent,:title,:description,0)',['family_id'=>$familyId,'parent'=>$assignmentId,'title'=>$sectionTitle,'description'=>$sectionDescription]);
+            $previousCompetency=null;$counts=['topics'=>0,'lessons'=>0,'competencies'=>0,'quizzes'=>0,'homeworks'=>0];
             foreach($definitions as $topicPosition=>$topic){
                 $topicId=self::insert($db,'INSERT INTO topics(id,family_id,section_id,title,description,position) VALUES(:id,:family_id,:parent,:title,:description,:position)',['family_id'=>$familyId,'parent'=>$sectionId,'title'=>$topic['title'],'description'=>$topic['description'],'position'=>$topicPosition]);$counts['topics']++;
                 foreach($topic['competencies'] as $competency){$competencyId=self::insert($db,'INSERT INTO competencies(id,family_id,topic_id,title,description) VALUES(:id,:family_id,:parent,:title,:description)',['family_id'=>$familyId,'parent'=>$topicId,'title'=>$competency,'description'=>'Проверяется практикой, объяснением и повторением.']);if($previousCompetency)$db->prepare('INSERT INTO competency_prerequisites(competency_id,prerequisite_id,family_id) VALUES(:id,:required,:family_id)')->execute(['id'=>$competencyId,'required'=>$previousCompetency,'family_id'=>$familyId]);$previousCompetency=$competencyId;$counts['competencies']++;}
@@ -34,21 +43,21 @@ final class PilotContentApi
                 }
             }
             $db->prepare('INSERT INTO subject_mastery_settings(id,family_id,curriculum_subject_id,min_evidence_count,min_successful_types,review_interval_days) VALUES(:id,:family_id,:assignment,2,2,3) ON DUPLICATE KEY UPDATE min_evidence_count=2,min_successful_types=2,review_interval_days=3')->execute(['id'=>Uuid::v4(),'family_id'=>$familyId,'assignment'=>$assignmentId]);
-            $db->prepare('INSERT INTO pilot_content_installs(id,family_id,student_id,route_code,curriculum_id) VALUES(:id,:family_id,:student_id,:route,:curriculum_id)')->execute(['id'=>Uuid::v4(),'family_id'=>$familyId,'student_id'=>$studentId,'route'=>self::ROUTE,'curriculum_id'=>$curriculumId]);
-            Audit::record($db,$familyId,'parent',$actorId,'pilot_content.installed','student',$studentId,['routeCode'=>self::ROUTE,...$counts]);$db->commit();
+            $db->prepare('INSERT INTO pilot_content_installs(id,family_id,student_id,route_code,curriculum_id) VALUES(:id,:family_id,:student_id,:route,:curriculum_id)')->execute(['id'=>Uuid::v4(),'family_id'=>$familyId,'student_id'=>$studentId,'route'=>$routeCode,'curriculum_id'=>$curriculumId]);
+            Audit::record($db,$familyId,'parent',$actorId,'pilot_content.installed','student',$studentId,['routeCode'=>$routeCode,...$counts]);$db->commit();
         }catch(\Throwable $error){$db->rollBack();throw $error;}
-        Http::json(['installed'=>true,'alreadyInstalled'=>false,'curriculumId'=>$curriculumId,'routeCode'=>self::ROUTE,'counts'=>$counts],201);
+        Http::json(['installed'=>true,'alreadyInstalled'=>false,'curriculumId'=>$curriculumId,'routeCode'=>$routeCode,'counts'=>$counts],201);
     }
 
     private static function subject(PDO $db,string $familyId): string{$row=self::one($db,'SELECT id FROM subjects WHERE family_id=:family_id AND title=\'Математика\' AND deleted_at IS NULL LIMIT 1',['family_id'=>$familyId]);if($row)return(string)$row['id'];return self::insert($db,'INSERT INTO subjects(id,family_id,title,description,color,is_custom) VALUES(:id,:family_id,\'Математика\',\'Базовый предмет пилотных маршрутов HomeEdu.\',\'#2563EB\',FALSE)',['family_id'=>$familyId]);}
-    private static function curriculum(PDO $db,string $familyId,string $studentId): string{$year=self::schoolYear();$row=self::one($db,'SELECT id FROM curricula WHERE family_id=:family_id AND student_id=:student_id AND school_year=:year AND deleted_at IS NULL LIMIT 1',['family_id'=>$familyId,'student_id'=>$studentId,'year'=>$year]);if($row)return(string)$row['id'];return self::insert($db,'INSERT INTO curricula(id,family_id,student_id,title,school_year) VALUES(:id,:family_id,:student_id,\'4 класс\',:year)',['family_id'=>$familyId,'student_id'=>$studentId,'year'=>$year]);}
+    private static function curriculum(PDO $db,string $familyId,string $studentId,int $grade): string{$year=self::schoolYear();$row=self::one($db,'SELECT id FROM curricula WHERE family_id=:family_id AND student_id=:student_id AND school_year=:year AND deleted_at IS NULL LIMIT 1',['family_id'=>$familyId,'student_id'=>$studentId,'year'=>$year]);if($row)return(string)$row['id'];return self::insert($db,'INSERT INTO curricula(id,family_id,student_id,title,school_year) VALUES(:id,:family_id,:student_id,:title,:year)',['family_id'=>$familyId,'student_id'=>$studentId,'title'=>"$grade класс",'year'=>$year]);}
     private static function assignment(PDO $db,string $familyId,string $curriculumId,string $subjectId): string{$row=self::one($db,'SELECT id FROM curriculum_subjects WHERE curriculum_id=:curriculum AND subject_id=:subject LIMIT 1',['curriculum'=>$curriculumId,'subject'=>$subjectId]);if($row)return(string)$row['id'];return self::insert($db,'INSERT INTO curriculum_subjects(id,family_id,curriculum_id,subject_id,position) VALUES(:id,:family_id,:curriculum,:subject,0)',['family_id'=>$familyId,'curriculum'=>$curriculumId,'subject'=>$subjectId]);}
     private static function schoolYear(): string{$year=(int)date('Y');$start=(int)date('n')>=8?$year:$year-1;return $start.'/'.($start+1);}
     /** @param array<string,mixed> $params */ private static function insert(PDO $db,string $sql,array $params): string{$id=Uuid::v4();$statement=$db->prepare($sql);$statement->execute(['id'=>$id,...$params]);return$id;}
     /** @param array<string,mixed> $params @return array<string,mixed>|false */ private static function one(PDO $db,string $sql,array $params): array|false{$statement=$db->prepare($sql);$statement->execute($params);return$statement->fetch();}
 
     /** @return array<int,array<string,mixed>> */
-    private static function definitions(): array{return[
+    private static function davidDefinitions(): array{return[
         ['title'=>'Дробь как часть целого','description'=>'Доли, запись дроби, числитель и знаменатель.','competencies'=>['Находит равные части целого','Читает и записывает простую дробь','Объясняет роль числителя и знаменателя'],'lessons'=>[
             ['title'=>'Доля и целое','summary'=>'Учимся видеть одну или несколько равных частей.','blocks'=>['Целое можно разделить на равные части. Одна такая часть называется долей. Запись 3/8 означает, что взяли три части из восьми равных частей целого.','Пиццу разделили на 8 равных кусочков и съели 3. Съеденная часть — 3/8 пиццы.'],'quiz'=>['prompt'=>'Пирог разделили на 6 равных частей и взяли 2. Какая часть взята?','type'=>'single_choice','options'=>['2/6','6/2','2/4'],'answer'=>['options'=>[0]],'explanation'=>'Число взятых частей пишем сверху, число всех равных частей — снизу.'],'homework'=>['title'=>'Дроби вокруг нас','instructions'=>'Найди дома предмет, который можно разделить на равные части. Нарисуй его и подпиши дробью закрашенную часть.']],
             ['title'=>'Числитель и знаменатель','summary'=>'Разбираемся, что показывают числа в записи дроби.','blocks'=>['Числитель стоит над чертой и показывает, сколько частей взяли. Знаменатель стоит под чертой и показывает, на сколько равных частей разделили целое.','В дроби 5/7 числитель равен 5, а знаменатель равен 7.'],'quiz'=>['prompt'=>'Что показывает знаменатель дроби 3/8?','type'=>'single_choice','options'=>['Взяли 3 части','Целое разделили на 8 равных частей','Осталось 5 частей'],'answer'=>['options'=>[1]],'explanation'=>'Знаменатель показывает общее число равных частей.']]
@@ -63,6 +72,26 @@ final class PilotContentApi
         ]],
         ['title'=>'Итоговое закрепление','description'=>'Самостоятельное объяснение и применение изученного.','competencies'=>['Объясняет решение задачи с простой дробью своими словами'],'lessons'=>[
             ['title'=>'Я умею объяснять дроби','summary'=>'Собираем знания вместе и объясняем решение.','blocks'=>['В хорошем объяснении есть три части: что означает дробь, какое действие выполняем и почему ответ подходит к условию.','Задача: использовали 3/10 ленты утром и 2/10 вечером. Всего использовали 5/10 ленты, потому что 3 + 2 = 5, а размер долей не изменился.'],'quiz'=>['prompt'=>'Какие утверждения верны для 2/5 + 1/5?','type'=>'multiple_choice','options'=>['Складываем числители','Складываем знаменатели','Знаменатель остаётся 5','Ответ равен 3/5'],'answer'=>['options'=>[0,2,3]],'explanation'=>'При одинаковых знаменателях складываем только числители.'],'homework'=>['title'=>'Итоговое объяснение','instructions'=>'Реши задачу: от книги прочитали 2/8 утром и 3/8 вечером. Какая часть прочитана? Объясни решение словами и, если хочешь, приложи рисунок.']]
+        ]]
+    ];}
+
+    /** @return array<int,array<string,mixed>> */
+    private static function saraDefinitions(): array{return[
+        ['title'=>'Основное свойство дроби','description'=>'Равные дроби, сокращение и приведение к новому знаменателю.','competencies'=>['Находит дроби, равные данной','Применяет основное свойство дроби','Сокращает дроби'],'lessons'=>[
+            ['title'=>'Равные дроби','summary'=>'Умножаем или делим числитель и знаменатель на одно число.','blocks'=>['Значение дроби не изменится, если её числитель и знаменатель умножить или разделить на одно и то же ненулевое число.','2/3 = 4/6, потому что числитель и знаменатель умножили на 2.'],'quiz'=>['prompt'=>'Какая дробь равна 3/5?','type'=>'single_choice','options'=>['6/10','6/5','3/10'],'answer'=>['options'=>[0]],'explanation'=>'Умножаем числитель и знаменатель 3/5 на 2.']],
+            ['title'=>'Сокращение дробей','summary'=>'Находим общий делитель числителя и знаменателя.','blocks'=>['Чтобы сократить дробь, раздели числитель и знаменатель на их общий делитель. Несократимая дробь больше не имеет общего делителя, кроме 1.','Сократим 12/18 на 6 и получим 2/3.'],'quiz'=>['prompt'=>'Сократи дробь 15/20.','type'=>'short_text','answer'=>['accepted'=>['3/4']],'explanation'=>'Делим числитель и знаменатель на 5.'],'homework'=>['title'=>'Тренировка сокращения','instructions'=>'Сократи дроби 8/12, 14/21 и 18/24. Для каждой укажи общий делитель.']]
+        ]],
+        ['title'=>'Общий знаменатель','description'=>'НОК знаменателей и дополнительные множители.','competencies'=>['Находит наименьший общий знаменатель','Определяет дополнительные множители','Приводит дроби к общему знаменателю'],'lessons'=>[
+            ['title'=>'Наименьший общий знаменатель','summary'=>'Используем наименьшее общее кратное знаменателей.','blocks'=>['Общий знаменатель должен делиться на каждый исходный знаменатель. Удобнее всего брать их наименьшее общее кратное.','Для 1/6 и 1/4 наименьший общий знаменатель равен 12.'],'quiz'=>['prompt'=>'Каков наименьший общий знаменатель дробей 1/8 и 1/6?','type'=>'number','answer'=>['value'=>24,'tolerance'=>0],'explanation'=>'Наименьшее число, кратное 8 и 6, — 24.']],
+            ['title'=>'Дополнительные множители','summary'=>'Приводим каждую дробь к выбранному знаменателю.','blocks'=>['Дополнительный множитель показывает, во сколько раз новый знаменатель больше старого. На него умножают и числитель, и знаменатель.','Для 2/3 и знаменателя 12 дополнительный множитель равен 4: 2/3 = 8/12.'],'quiz'=>['prompt'=>'Во что превратится 3/4 при знаменателе 20?','type'=>'single_choice','options'=>['15/20','12/20','3/20'],'answer'=>['options'=>[0]],'explanation'=>'Дополнительный множитель 5, поэтому 3 × 5 = 15.'],'homework'=>['title'=>'К общему знаменателю','instructions'=>'Приведи пары 1/3 и 1/4, затем 3/5 и 1/2 к наименьшему общему знаменателю.']]
+        ]],
+        ['title'=>'Сравнение и действия','description'=>'Сравнение, сложение и вычитание дробей с разными знаменателями.','competencies'=>['Сравнивает дроби с разными знаменателями','Складывает дроби с разными знаменателями','Вычитает дроби с разными знаменателями'],'lessons'=>[
+            ['title'=>'Сравнение разных дробей','summary'=>'Приводим дроби к общему знаменателю и сравниваем числители.','blocks'=>['Чтобы сравнить дроби с разными знаменателями, приведи их к общему знаменателю. Затем сравни числители.','3/4 = 9/12, а 2/3 = 8/12, значит 3/4 > 2/3.'],'quiz'=>['prompt'=>'Какая дробь больше?','type'=>'single_choice','options'=>['5/6','7/9','Они равны'],'answer'=>['options'=>[0]],'explanation'=>'5/6 = 15/18, а 7/9 = 14/18.']],
+            ['title'=>'Сложение дробей','summary'=>'Общий знаменатель, новые числители и сокращение ответа.','blocks'=>['Сначала приведи дроби к общему знаменателю, затем сложи числители. Если можно, сократи результат.','1/4 + 1/6 = 3/12 + 2/12 = 5/12.'],'quiz'=>['prompt'=>'Вычисли 1/3 + 1/6.','type'=>'short_text','answer'=>['accepted'=>['1/2','3/6']],'explanation'=>'1/3 = 2/6, поэтому сумма равна 3/6 = 1/2.']],
+            ['title'=>'Вычитание дробей','summary'=>'Приводим к общему знаменателю перед вычитанием.','blocks'=>['При вычитании дробей с разными знаменателями сначала получи одинаковые доли, а затем вычти числители.','5/6 − 1/4 = 10/12 − 3/12 = 7/12.'],'quiz'=>['prompt'=>'Вычисли 3/4 − 1/6. Укажи числитель несократимого ответа.','type'=>'number','answer'=>['value'=>7,'tolerance'=>0],'explanation'=>'3/4 = 9/12, 1/6 = 2/12, разность равна 7/12.'],'homework'=>['title'=>'Действия с дробями','instructions'=>'Вычисли 2/3 + 3/8 и 7/10 − 1/4. Запиши общий знаменатель и каждый шаг.']]
+        ]],
+        ['title'=>'Задачи и объяснение','description'=>'Выбор действия и аргументированное решение текстовых задач.','competencies'=>['Выбирает действие в задаче с дробями','Проверяет и объясняет решение своими словами'],'lessons'=>[
+            ['title'=>'Маршрут решения задачи','summary'=>'Переводим условие задачи на язык дробей.','blocks'=>['Прочитай вопрос, выпиши известные дроби, выбери действие и оцени ожидаемый размер ответа. После вычисления проверь сокращение.','Сара прочитала 2/5 книги в будни и 1/4 в выходные. Всего это 8/20 + 5/20 = 13/20 книги.'],'quiz'=>['prompt'=>'Какие шаги нужны для 2/3 − 1/5?','type'=>'multiple_choice','options'=>['Найти общий знаменатель','Вычесть знаменатели','Вычесть новые числители','Проверить сокращение'],'answer'=>['options'=>[0,2,3]],'explanation'=>'Знаменатели не вычитают: сначала дроби приводят к общему знаменателю.'],'homework'=>['title'=>'Итоговая задача','instructions'=>'За два дня использовали 3/8 и 2/5 запаса материалов. Какая часть использована? Реши, сократи ответ и объясни, почему он меньше целого.']]
         ]]
     ];}
 }

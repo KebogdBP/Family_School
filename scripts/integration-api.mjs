@@ -272,15 +272,24 @@ const repeatedDavidRoute = await request(`/students/${david.student.id}/pilot-co
 assert(!repeatedDavidRoute.installed && repeatedDavidRoute.alreadyInstalled && repeatedDavidRoute.curriculumId === davidRoute.curriculumId, 'David pilot route is not idempotent')
 const davidTree = await request(`/curricula/${davidRoute.curriculumId}`)
 assert(davidTree.curriculum.subjects[0].sections[0].topics.length === 4, 'David curriculum tree is incomplete')
+const saraRoute = await request(`/students/${sara.student.id}/pilot-content/sara-fractions`, { method: 'POST' })
+assert(saraRoute.installed && saraRoute.counts.topics === 4 && saraRoute.counts.lessons === 8 && saraRoute.counts.competencies === 11, 'Sara pilot route is incomplete')
+const repeatedSaraRoute = await request(`/students/${sara.student.id}/pilot-content/sara-fractions`, { method: 'POST' })
+assert(!repeatedSaraRoute.installed && repeatedSaraRoute.alreadyInstalled && repeatedSaraRoute.curriculumId === saraRoute.curriculumId, 'Sara pilot route is not idempotent')
+const saraTree = await request(`/curricula/${saraRoute.curriculumId}`)
+assert(saraTree.curriculum.subjects[0].sections.some((item) => item.topics.length === 4), 'Sara curriculum tree is incomplete')
 const familyExport = await request('/family/export')
 assert(familyExport.schemaVersion === 1 && familyExport.data.students.length === 2, 'Family export is incomplete')
 assert(familyExport.data.homeworkSubmissions.length === 1 && familyExport.data.submissionFiles[0].original_name === 'тетрадь.png', 'Learning records are missing from family export')
-assert(familyExport.data.pilotContentInstalls.length === 1, 'Pilot content installation marker is missing from export')
+assert(familyExport.data.pilotContentInstalls.length === 2, 'Pilot content installation markers are missing from export')
 const serializedExport = JSON.stringify(familyExport)
 for (const forbidden of ['password_hash', 'pin_hash', 'token_hash', 'storage_name']) assert(!serializedExport.includes(forbidden), `Sensitive field leaked into export: ${forbidden}`)
 
 await request('/auth/logout', { method: 'POST' }); cookie = ''
 await request('/auth/student/login', { method: 'POST', body: JSON.stringify({ studentId: david.student.id, pin: '1004' }) })
 assert((await request('/student/lessons')).lessons.length === 7, 'David cannot access all lessons from his pilot route')
+await request('/auth/logout', { method: 'POST' }); cookie = ''
+await request('/auth/student/login', { method: 'POST', body: JSON.stringify({ studentId: sara.student.id, pin: '1206' }) })
+assert((await request('/student/lessons')).lessons.length === 9, 'Sara cannot access her original lesson and all pilot route lessons')
 
-console.log('Integration OK: learning cycle and repeatable David pilot route are complete')
+console.log('Integration OK: learning cycle and repeatable David and Sara pilot routes are complete')

@@ -44,7 +44,7 @@
 - [x] CRUD API for subjects, sections, topics and lessons
 - [x] curriculum creation, subject assignment and ordered curriculum tree
 - [x] idempotent grade 4 fractions route for David: 4 topics, 7 lessons, 10 linked competencies, 7 quizzes and 4 open works
-- [ ] seed route «Обыкновенные дроби» for Sara
+- [x] idempotent grade 6 common fractions route for Sara: 4 topics, 8 lessons, 11 linked competencies, 8 quizzes and 4 open works
 - [x] parent curriculum page for each student
 - [x] create curriculum and assign existing or custom subjects
 - [x] nested section, topic and lesson creation UI
@@ -101,7 +101,7 @@
 Реализация сохраняет утверждённый стек и продуктовые принципы, но часть поздних функций была сделана до обязательного пилотного контента. До продолжения фазы качества нужно закрыть следующие продуктовые пробелы:
 
 - [x] готовый маршрут «Дроби» для Давида, 4 класс;
-- [ ] готовый маршрут «Обыкновенные дроби» для Сары, 6 класс;
+- [x] готовый маршрут «Обыкновенные дроби» для Сары, 6 класс;
 - [ ] входная мини-диагностика и выбор первого шага;
 - [ ] проверка полного учебного цикла для обоих профилей;
 - [ ] минимальный AI Gateway: безопасная подсказка и черновик теста;
@@ -114,4 +114,4 @@
 
 ## Следующая задача
 
-Создать повторяемый seed-маршрут «Обыкновенные дроби» для Сары, 6 класс.
+Добавить входную мини-диагностику для обоих пилотных маршрутов и сохранять её результат как отдельное доказательство.

@@ -64,3 +64,4 @@ export const createHomework = (lessonId: string, input: { title: string; instruc
 export const deleteHomework = (id: string) => api<{ status: string }>(`/homeworks/${id}`, { method: 'DELETE' })
 export type PilotContentResult = { installed: boolean; alreadyInstalled: boolean; curriculumId: string; routeCode: string; counts?: { topics: number; lessons: number; competencies: number; quizzes: number; homeworks: number } }
 export const installDavidFractions = (studentId: string) => api<PilotContentResult>(`/students/${studentId}/pilot-content/david-fractions`, { method: 'POST' })
+export const installSaraFractions = (studentId: string) => api<PilotContentResult>(`/students/${studentId}/pilot-content/sara-fractions`, { method: 'POST' })
