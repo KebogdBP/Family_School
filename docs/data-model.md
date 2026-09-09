@@ -11,6 +11,7 @@ users ──< parent_student_links >── students
 
 students ──< curricula ──< curriculum_subjects ──< sections ──< topics ──< lessons
 topics ──< mastery_states ──< mastery_evidence
+students ──< diagnostic_attempts >── topics / lessons
 topics ──< review_schedule ──< review_attempts
 topics ──< review_question_settings >── quiz_questions
 students ──< pilot_content_installs
