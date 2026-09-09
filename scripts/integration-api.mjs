@@ -94,6 +94,9 @@ const textQuiz = await request(`/lessons/${lesson.lesson.id}/quizzes`, {
 })
 const parentQuizzes = await request(`/lessons/${lesson.lesson.id}/quizzes`)
 assert(parentQuizzes.quizzes.length === 4, 'All quiz question types were not created')
+const singleReviewQuestionId = parentQuizzes.quizzes.find((item) => item.id === quiz.quiz.id)?.question.id
+const textReviewQuestionId = parentQuizzes.quizzes.find((item) => item.id === textQuiz.quiz.id)?.question.id
+assert(singleReviewQuestionId && textReviewQuestionId, 'Review question identifiers are missing')
 const homework = await request(`/lessons/${lesson.lesson.id}/homeworks`, {
   method: 'POST', body: JSON.stringify({ title: 'Объясни дробь', instructions: 'Объясни своими словами, почему 2/4 равно 1/2.', position: 1 }),
 })
@@ -216,6 +219,11 @@ assert(masteryReport.achievements.some((item) => item.code === 'independent_revi
 assert(masteryReport.achievements.some((item) => item.code === 'independent_explanation'), 'Independent explanation achievement was not awarded')
 assert(masteryReport.summary.achievements === 2, 'Achievement count is incorrect')
 assert(masteryReport.masterySubjects[0].title === 'Математика' && masteryReport.masterySubjects[0].score > 0, 'Subject progress was not calculated')
+const automaticReviewQuestions = await request(`/students/${sara.student.id}/topics/${topic.topic.id}/review-questions`)
+assert(automaticReviewQuestions.mode === 'automatic' && automaticReviewQuestions.selectedQuestionIds.length === 3, 'Default review question selection is incorrect')
+await request(`/students/${sara.student.id}/topics/${topic.topic.id}/review-questions`, { method: 'PUT', body: JSON.stringify({ questionIds: [textReviewQuestionId, singleReviewQuestionId] }) })
+const customReviewQuestions = await request(`/students/${sara.student.id}/topics/${topic.topic.id}/review-questions`)
+assert(customReviewQuestions.mode === 'custom' && customReviewQuestions.selectedQuestionIds.length === 2, 'Custom review question selection was not saved')
 await request('/auth/logout', { method: 'POST' }); cookie = ''
 await request('/auth/student/login', { method: 'POST', body: JSON.stringify({ studentId: david.student.id, pin: '1004' }) })
 const foreignReview = await fetch(`${baseUrl}/student/reviews/${masteryReport.reviewTasks[0].id}`, { headers: { Cookie: cookie } })
@@ -229,11 +237,10 @@ await request('/auth/student/login', { method: 'POST', body: JSON.stringify({ st
 const studentReviews = await request('/student/reviews')
 assert(studentReviews.reviewTasks.length === 1 && studentReviews.reviewTasks[0].isDue, 'Sara due review task is missing')
 const reviewSession = await request(`/student/reviews/${studentReviews.reviewTasks[0].id}`)
-assert(reviewSession.review.questions.length === 3 && reviewSession.review.questions[0].correctAnswer === undefined, 'Short review questions are incorrect or leak answers')
+assert(reviewSession.review.questions.length === 2 && reviewSession.review.questions[0].prompt === 'Как называется нижняя часть дроби?' && reviewSession.review.questions[0].correctAnswer === undefined, 'Custom review questions are incorrect or leak answers')
 const reviewAttempt = await request(`/student/reviews/${studentReviews.reviewTasks[0].id}`, { method: 'POST', body: JSON.stringify({ answers: [
-  { questionId: reviewSession.review.questions[0].id, selectedOption: 0 },
-  { questionId: reviewSession.review.questions[1].id, selectedOptions: [0, 2] },
-  { questionId: reviewSession.review.questions[2].id, numberAnswer: 0.5 },
+  { questionId: reviewSession.review.questions[0].id, textAnswer: 'знаменатель' },
+  { questionId: reviewSession.review.questions[1].id, selectedOption: 0 },
 ] }) })
 assert(reviewAttempt.attempt.successful && reviewAttempt.attempt.score === 100, 'Short review was not scored correctly')
 const mastered = await request('/student/mastery')
@@ -241,4 +248,4 @@ assert(mastered.topics[0].status === 'mastered', 'Successful review did not mast
 assert((await request('/student/reviews')).reviewTasks.length === 0, 'Completed review task stayed active')
 assert((await request('/student/achievements')).achievements.some((item) => item.code === 'durable_mastery'), 'Durable mastery achievement was not awarded')
 
-console.log('Integration OK: due review quiz is assembled, scored and closes the mastery schedule')
+console.log('Integration OK: custom review quiz is assembled, scored and closes the mastery schedule')

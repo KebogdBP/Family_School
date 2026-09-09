@@ -9,6 +9,11 @@ export const getWeeklyPlan = (studentId: string, weekStart: string) => api<Weekl
 export const addPlanItem = (studentId: string, input: { lessonId: string; scheduledDate: string; isRequired: boolean; position: number }) => api<{ planItem: { id: string } }>(`/students/${studentId}/plan-items`, { method: 'POST', body: JSON.stringify(input) })
 export const deletePlanItem = (id: string) => api<{ status: string }>(`/plan-items/${id}`, { method: 'DELETE' })
 
+export type ReviewQuestionSetting = { id: string; title: string; lessonTitle: string; prompt: string; questionType: 'single_choice' | 'multiple_choice' | 'number' | 'short_text' }
+export type ReviewQuestionSettings = { mode: 'automatic' | 'custom'; selectedQuestionIds: string[]; questions: ReviewQuestionSetting[] }
+export const getReviewQuestionSettings = (studentId: string, topicId: string) => api<ReviewQuestionSettings>(`/students/${studentId}/topics/${topicId}/review-questions`)
+export const saveReviewQuestionSettings = (studentId: string, topicId: string, questionIds: string[]) => api<{ mode: 'custom'; selectedQuestionIds: string[] }>(`/students/${studentId}/topics/${topicId}/review-questions`, { method: 'PUT', body: JSON.stringify({ questionIds }) })
+
 export type ProgressReport = {
   summary: { total: number; notStarted: number; inProgress: number; completed: number; needsHelp: number; masteredTopics: number; topicsToReview: number; achievements: number }
   items: Array<{ id: string; lessonId: string; title: string; subjectTitle: string; subjectColor: string; scheduledDate: string; isRequired: boolean; progressStatus: LessonProgressStatus; startedAt: string | null; completedAt: string | null; reflection: { feeling: string; comment: string | null } | null }>

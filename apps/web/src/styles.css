@@ -199,6 +199,16 @@ h2 { margin-bottom: 4px; }
 .subject-progress-card { display: grid; gap: 12px; border-top: 5px solid #2563eb; }
 .subject-progress-card h2, .subject-progress-card p { margin: 0; }
 .subject-progress-card .lesson-card-heading > strong { color: #1d4ed8; font-size: 1.4rem; }
+.review-question-editor { display: grid; gap: 10px; padding-top: 4px; }
+.review-question-editor > button { justify-self: start; }
+.review-question-panel { display: grid; gap: 11px; padding: 13px; border: 1px solid #d0d5dd; border-radius: 11px; background: #f8fafc; }
+.review-question-panel p { margin: 0; }
+.review-question-list { display: grid; gap: 8px; }
+.review-question-option { display: grid; grid-template-columns: auto 1fr; align-items: start; gap: 10px; padding: 10px; border: 1px solid #e4e7ec; border-radius: 9px; background: white; cursor: pointer; }
+.review-question-option input { width: 18px; min-height: 18px; margin-top: 2px; }
+.review-question-option strong, .review-question-option small { display: block; }
+.review-question-option small { margin-top: 4px; color: #697586; }
+.form-success { margin: 0; color: #067647; font-weight: 700; }
 .review-explanation { grid-column: 1 / -1; padding: 12px; border-radius: 10px; background: #fffaeb; }
 .quiz-editor { display: grid; gap: 14px; margin-top: 26px; }
 .quiz-form { display: grid; gap: 14px; }

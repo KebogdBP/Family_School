@@ -1,4 +1,4 @@
-# HomeEdu — модель данных фазы 2
+# HomeEdu — модель данных
 
 ```text
 families
@@ -8,6 +8,11 @@ families
  └── audit_events
 
 users ──< parent_student_links >── students
+
+students ──< curricula ──< curriculum_subjects ──< sections ──< topics ──< lessons
+topics ──< mastery_states ──< mastery_evidence
+topics ──< review_schedule ──< review_attempts
+topics ──< review_question_settings >── quiz_questions
 ```
 
 ## Инварианты
@@ -19,6 +24,8 @@ users ──< parent_student_links >── students
 - смена PIN завершает все активные сессии ребёнка;
 - сырые session token, пароль и PIN никогда не хранятся в базе;
 - важные изменения записываются в `audit_events`.
+- явно выбранные вопросы повторения принадлежат той же теме, программе, ученику и семье;
+- если для темы нет строк `review_question_settings`, контрольная автоматически берёт первые три активных вопроса;
+- пользовательский набор содержит от одного до трёх вопросов и сохраняет заданный родителем порядок.
 
-Полная схема создаётся миграцией `apps/api/migrations/001_initial.sql`.
-
+Полная схема последовательно создаётся SQL-миграциями из `apps/api/migrations`.

@@ -41,7 +41,7 @@ try {
         preg_match('#^/api/v1/student/reviews/[0-9a-f-]{36}$#', $path) === 1 => ReviewApi::dispatch($db, $method, $path),
         preg_match('#^/api/v1/(lessons/[0-9a-f-]{36}/homeworks|homeworks/[0-9a-f-]{36}|student/homeworks/[0-9a-f-]{36}/(submission|files)|submission-files/[0-9a-f-]{36}|review-submissions|submissions/[0-9a-f-]{36}/reviews)$#', $path) === 1 => HomeworkApi::dispatch($db, $method, $path),
         str_starts_with($path, '/api/v1/student/') => StudentLearningApi::dispatch($db, $method, $path),
-        preg_match('#^/api/v1/(students/[0-9a-f-]{36}/(weekly-plan|plan-items|progress-report)|plan-items/[0-9a-f-]{36}|review-schedules/[0-9a-f-]{36})$#', $path) === 1 => PlanningApi::dispatch($db, $method, $path),
+        preg_match('#^/api/v1/(students/[0-9a-f-]{36}/(weekly-plan|plan-items|progress-report|topics/[0-9a-f-]{36}/review-questions)|plan-items/[0-9a-f-]{36}|review-schedules/[0-9a-f-]{36})$#', $path) === 1 => PlanningApi::dispatch($db, $method, $path),
         default => CurriculumApi::dispatch($db, $method, $path),
     };
 } catch (Throwable $error) {

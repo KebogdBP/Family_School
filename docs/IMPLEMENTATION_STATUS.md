@@ -87,7 +87,9 @@
 - [x] migration 013 for review attempts and per-question answers
 - [x] short review quiz assembled from up to three existing topic questions
 - [x] parent review rescheduling and automatic task completion after a passing score
+- [x] migration 014 and parent editor for selecting and ordering 1–3 review questions
+- [x] automatic question selection remains available until the parent saves a custom set
 
 ## Следующая задача
 
-Добавить редактор вопросов повторения, чтобы родитель мог выбирать их явно.
+Добавить ребёнку кнопку «Продолжить последнее занятие» на экране «Сегодня».

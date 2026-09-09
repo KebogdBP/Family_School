@@ -111,6 +111,7 @@ PIN принимается только как строка из 4–8 цифр 
 | GET | `/student/reviews` | предстоящие и просроченные задания на повторение |
 | GET, POST | `/student/reviews/{id}` | получить короткую контрольную и отправить все ответы |
 | PATCH | `/review-schedules/{id}` | перенести дату повторения родителем |
+| GET, PUT | `/students/{id}/topics/{topicId}/review-questions` | посмотреть доступные вопросы и выбрать 1–3 вопроса контрольного повторения |
 | POST | `/student/lessons/{id}/reflection` | сохранить самооценку завершённого урока |
 | GET | `/students/{id}/progress-report` | родительский отчёт по назначениям и обратной связи |
 | GET, POST | `/lessons/{id}/quizzes` | список и создание тестов урока |

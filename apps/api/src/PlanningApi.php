@@ -19,6 +19,10 @@ final class PlanningApi
                 => self::getPlan($db, $familyId, $m[1]),
             $method === 'GET' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/progress-report$#', $path, $m) === 1
                 => self::progressReport($db, $familyId, $m[1]),
+            $method === 'GET' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/topics/([0-9a-f-]{36})/review-questions$#', $path, $m) === 1
+                => self::reviewQuestions($db, $familyId, $m[1], $m[2]),
+            $method === 'PUT' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/topics/([0-9a-f-]{36})/review-questions$#', $path, $m) === 1
+                => self::saveReviewQuestions($db, $familyId, $actorId, $m[1], $m[2]),
             $method === 'POST' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/plan-items$#', $path, $m) === 1
                 => self::addItem($db, $familyId, $actorId, $m[1]),
             $method === 'DELETE' && preg_match('#^/api/v1/plan-items/([0-9a-f-]{36})$#', $path, $m) === 1
@@ -135,6 +139,51 @@ final class PlanningApi
         Http::json(['status' => 'ok']);
     }
 
+    private static function reviewQuestions(PDO $db, string $familyId, string $studentId, string $topicId): never
+    {
+        self::assertStudentTopic($db, $familyId, $studentId, $topicId);
+        $statement = $db->prepare(
+            'SELECT q.id, q.prompt, q.question_type, a.title, l.title AS lesson_title,
+                    rqs.position AS selected_position
+             FROM lessons l JOIN activities a ON a.lesson_id=l.id AND a.activity_type=\'quiz\' AND a.deleted_at IS NULL
+             JOIN quiz_questions q ON q.activity_id=a.id
+             LEFT JOIN review_question_settings rqs ON rqs.question_id=q.id AND rqs.topic_id=:selected_topic
+             WHERE l.topic_id=:topic_id AND l.deleted_at IS NULL
+             ORDER BY a.position,a.created_at'
+        );
+        $statement->execute(['selected_topic'=>$topicId,'topic_id'=>$topicId]);
+        $rows=$statement->fetchAll();
+        $explicit=array_values(array_filter($rows,static fn(array $row):bool=>$row['selected_position']!==null));
+        usort($explicit,static fn(array $a,array $b):int=>(int)$a['selected_position']<=>(int)$b['selected_position']);
+        $selectedIds=$explicit===[]?array_column(array_slice($rows,0,3),'id'):array_column($explicit,'id');
+        Http::json(['mode'=>$explicit===[]?'automatic':'custom','selectedQuestionIds'=>$selectedIds,'questions'=>array_map(static fn(array $row):array=>[
+            'id'=>$row['id'],'title'=>$row['title'],'lessonTitle'=>$row['lesson_title'],'prompt'=>$row['prompt'],'questionType'=>$row['question_type'],
+        ],$rows)]);
+    }
+
+    private static function saveReviewQuestions(PDO $db,string $familyId,string $actorId,string $studentId,string $topicId): never
+    {
+        self::assertStudentTopic($db,$familyId,$studentId,$topicId);
+        $raw=Http::body()['questionIds']??null;
+        if(!is_array($raw))Http::error('validation_error','Выберите от одного до трёх вопросов',422);
+        $questionIds=array_values(array_unique(array_map(static fn(mixed $id):string=>(string)$id,$raw)));
+        if(count($questionIds)<1||count($questionIds)>3||count($questionIds)!==count($raw))Http::error('validation_error','Выберите от одного до трёх разных вопросов',422);
+        foreach($questionIds as $id)if(preg_match('/^[0-9a-f-]{36}$/',$id)!==1)Http::error('validation_error','Некорректный вопрос',422);
+        $placeholders=implode(',',array_fill(0,count($questionIds),'?'));
+        $check=$db->prepare("SELECT q.id FROM quiz_questions q JOIN activities a ON a.id=q.activity_id JOIN lessons l ON l.id=a.lesson_id WHERE q.id IN ($placeholders) AND q.family_id=? AND l.topic_id=? AND a.deleted_at IS NULL AND l.deleted_at IS NULL");
+        $check->execute([...$questionIds,$familyId,$topicId]);
+        if(count($check->fetchAll())!==count($questionIds))Http::error('validation_error','Вопрос не относится к выбранной теме',422);
+        $db->beginTransaction();
+        try{
+            $db->prepare('DELETE FROM review_question_settings WHERE family_id=:family_id AND student_id=:student_id AND topic_id=:topic_id')->execute(['family_id'=>$familyId,'student_id'=>$studentId,'topic_id'=>$topicId]);
+            $insert=$db->prepare('INSERT INTO review_question_settings(id,family_id,student_id,topic_id,question_id,position) VALUES(:id,:family_id,:student_id,:topic_id,:question_id,:position)');
+            foreach($questionIds as $position=>$questionId)$insert->execute(['id'=>Uuid::v4(),'family_id'=>$familyId,'student_id'=>$studentId,'topic_id'=>$topicId,'question_id'=>$questionId,'position'=>$position]);
+            Audit::record($db,$familyId,'parent',$actorId,'review.questions_configured','topic',$topicId,['questionIds'=>$questionIds]);
+            $db->commit();
+        }catch(\Throwable $error){$db->rollBack();throw $error;}
+        Http::json(['mode'=>'custom','selectedQuestionIds'=>$questionIds]);
+    }
+
     private static function rescheduleReview(PDO $db,string $familyId,string $actorId,string $id): never
     {
         $date=self::date((string)(Http::body()['dueDate']??''));$s=$db->prepare('UPDATE review_schedule SET due_date=:due_date WHERE id=:id AND family_id=:family_id AND status=\'pending\'');$s->execute(['due_date'=>$date,'id'=>$id,'family_id'=>$familyId]);if($s->rowCount()===0)Http::error('not_found','Активное повторение не найдено',404);$db->prepare('UPDATE mastery_states ms JOIN review_schedule rs ON rs.student_id=ms.student_id AND rs.topic_id=ms.topic_id SET ms.next_review_at=:due_date WHERE rs.id=:id')->execute(['due_date'=>$date,'id'=>$id]);Audit::record($db,$familyId,'parent',$actorId,'review.rescheduled','review_schedule',$id,['dueDate'=>$date]);Http::json(['reviewTask'=>['id'=>$id,'dueDate'=>$date]]);
@@ -152,6 +201,13 @@ final class PlanningApi
         $statement = $db->prepare('SELECT l.id FROM curricula c JOIN curriculum_subjects cs ON cs.curriculum_id=c.id JOIN sections se ON se.curriculum_subject_id=cs.id JOIN topics t ON t.section_id=se.id JOIN lessons l ON l.topic_id=t.id WHERE c.student_id=:student_id AND c.family_id=:family_id AND l.id=:lesson_id AND c.deleted_at IS NULL AND l.deleted_at IS NULL');
         $statement->execute(['student_id' => $studentId, 'family_id' => $familyId, 'lesson_id' => $lessonId]);
         if (!$statement->fetchColumn()) Http::error('not_found', 'Урок не входит в программу ученика', 404);
+    }
+
+    private static function assertStudentTopic(PDO $db,string $familyId,string $studentId,string $topicId): void
+    {
+        $statement=$db->prepare('SELECT t.id FROM curricula c JOIN curriculum_subjects cs ON cs.curriculum_id=c.id JOIN sections se ON se.curriculum_subject_id=cs.id JOIN topics t ON t.section_id=se.id WHERE c.student_id=:student_id AND c.family_id=:family_id AND t.id=:topic_id AND c.deleted_at IS NULL AND t.deleted_at IS NULL');
+        $statement->execute(['student_id'=>$studentId,'family_id'=>$familyId,'topic_id'=>$topicId]);
+        if(!$statement->fetchColumn())Http::error('not_found','Тема не найдена в программе ученика',404);
     }
 
     private static function date(string $value): string
