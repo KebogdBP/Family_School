@@ -74,7 +74,9 @@
 - [x] authenticated file delivery for the owning student and parent family
 - [x] migration 009 for multiple-choice, number and short-text quiz answers
 - [x] deterministic scoring and parent/student UI for all four quiz question types
+- [x] migration 010 for topic mastery states, evidence and review scheduling
+- [x] evidence-based topic map for parent and personal review reminders for student
 
 ## Следующая задача
 
-Добавить первые показатели освоения тем и интервальное повторение.
+Добавить достижения за самостоятельную доработку и устойчивое повторение.

@@ -8,7 +8,7 @@ import { ApiError } from '@/shared/api/client'
 import { CurriculumPage } from '@/pages/CurriculumPage'
 import { LessonEditorPage } from '@/pages/LessonEditorPage'
 import { StudentLessonPage } from '@/pages/StudentLessonPage'
-import { getTodayLessons, type StudentLessonSummary } from '@/entities/learning/api'
+import { getStudentMastery, getTodayLessons, type StudentLessonSummary } from '@/entities/learning/api'
 import { WeeklyPlanPage } from '@/pages/WeeklyPlanPage'
 import { ProgressReportPage } from '@/pages/ProgressReportPage'
 import { ReviewQueuePage } from '@/pages/ReviewQueuePage'
@@ -133,8 +133,10 @@ function ChildrenPage() {
 
 function TodayPage({ principal }: { principal: Principal }) {
   const lessons = useQuery({ queryKey: ['student-lessons'], queryFn: getTodayLessons })
+  const mastery = useQuery({ queryKey: ['student-mastery'], queryFn: getStudentMastery })
   const completed = lessons.data?.lessons.filter((lesson) => lesson.progress.status === 'completed').length ?? 0
-  return <><header className="page-header"><p className="eyebrow">Сегодня</p><h1>Привет, {principal.displayName}!</h1><p className="muted">{principal.grade} класс · пройдено {completed} из {lessons.data?.lessons.length ?? 0}</p></header><ErrorText error={lessons.error} />{lessons.isLoading ? <p>Собираем план на сегодня…</p> : lessons.data?.lessons.length ? <section className="student-lessons">{lessons.data.lessons.map((lesson) => <StudentLessonCard key={lesson.planItemId} lesson={lesson} />)}</section> : <section className="card empty"><h2>На сегодня всё свободно</h2><p className="muted">В плане нет уроков. Можно отдохнуть или повторить пройденное.</p></section>}</>
+  const reviewTopics = mastery.data?.topics.filter((topic) => topic.status === 'needs_reinforcement') ?? []
+  return <><header className="page-header"><p className="eyebrow">Сегодня</p><h1>Привет, {principal.displayName}!</h1><p className="muted">{principal.grade} класс · пройдено {completed} из {lessons.data?.lessons.length ?? 0}</p></header><ErrorText error={lessons.error ?? mastery.error} />{reviewTopics.length > 0 && <section className="review-reminder card"><div><span className="badge">Повторение</span><h2>Закрепи пройденное</h2><p className="muted">Эти темы уже получаются — короткое повторение поможет запомнить надолго.</p></div><ul>{reviewTopics.map((topic) => <li key={topic.id}><strong>{topic.title}</strong><span>{topic.subjectTitle}{topic.nextReviewAt ? ` · до ${new Intl.DateTimeFormat('ru-RU').format(new Date(`${topic.nextReviewAt}T12:00:00`))}` : ''}</span></li>)}</ul></section>}{lessons.isLoading ? <p>Собираем план на сегодня…</p> : lessons.data?.lessons.length ? <section className="student-lessons">{lessons.data.lessons.map((lesson) => <StudentLessonCard key={lesson.planItemId} lesson={lesson} />)}</section> : <section className="card empty"><h2>На сегодня всё свободно</h2><p className="muted">В плане нет уроков. Можно отдохнуть или повторить пройденное.</p></section>}</>
 }
 
 function StudentLessonCard({ lesson }: { lesson: StudentLessonSummary }) {

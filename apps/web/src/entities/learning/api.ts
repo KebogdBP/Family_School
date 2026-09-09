@@ -16,9 +16,11 @@ export type SubmissionFile = { id: string; originalName: string; mimeType: strin
 export type StudentHomework = { id: string; title: string; instructions: string; submission: null | { id: string; responseText: string; status: 'draft' | 'submitted' | 'needs_revision' | 'reviewed'; reviewComment: string | null; reviewGrade: number | null; files: SubmissionFile[] } }
 export type StudentLesson = StudentLessonSummary & { blocks: LessonBlock[]; quizzes: StudentQuiz[]; homeworks: StudentHomework[]; reflection: Reflection | null }
 export type TodayLesson = StudentLessonSummary & { planItemId: string; isRequired: boolean }
+export type MasteryTopic = { id: string; title: string; sectionTitle: string; subjectTitle: string; subjectColor: string; status: 'available' | 'learning' | 'needs_reinforcement' | 'mastered'; score: number; evidenceCount: number; successfulCount: number; nextReviewAt: string | null; evidence: string[] }
 
 export const getStudentLessons = () => api<{ lessons: StudentLessonSummary[] }>('/student/lessons')
 export const getTodayLessons = () => api<{ date: string; lessons: TodayLesson[] }>('/student/today')
+export const getStudentMastery = () => api<{ topics: MasteryTopic[] }>('/student/mastery')
 export const getStudentLesson = (lessonId: string) => api<{ lesson: StudentLesson }>(`/student/lessons/${lessonId}`)
 export const saveLessonProgress = (lessonId: string, lastBlockPosition: number, completed = false) =>
   api<{ progress: Progress }>(`/student/lessons/${lessonId}/progress`, {

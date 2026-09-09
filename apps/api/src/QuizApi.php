@@ -74,7 +74,7 @@ final class QuizApi
 
     private static function attempt(PDO $db, string $familyId, string $studentId, string $quizId): never
     {
-        $statement=$db->prepare('SELECT q.id,q.question_type,q.options_json,q.correct_answer_json,q.explanation FROM activities a JOIN quiz_questions q ON q.activity_id=a.id JOIN lessons l ON l.id=a.lesson_id JOIN topics t ON t.id=l.topic_id JOIN sections se ON se.id=t.section_id JOIN curriculum_subjects cs ON cs.id=se.curriculum_subject_id JOIN curricula c ON c.id=cs.curriculum_id WHERE a.id=:id AND a.family_id=:family_id AND c.student_id=:student_id AND a.activity_type=\'quiz\' AND a.deleted_at IS NULL AND l.deleted_at IS NULL LIMIT 1');
+        $statement=$db->prepare('SELECT q.id,q.question_type,q.options_json,q.correct_answer_json,q.explanation,t.id AS topic_id FROM activities a JOIN quiz_questions q ON q.activity_id=a.id JOIN lessons l ON l.id=a.lesson_id JOIN topics t ON t.id=l.topic_id JOIN sections se ON se.id=t.section_id JOIN curriculum_subjects cs ON cs.id=se.curriculum_subject_id JOIN curricula c ON c.id=cs.curriculum_id WHERE a.id=:id AND a.family_id=:family_id AND c.student_id=:student_id AND a.activity_type=\'quiz\' AND a.deleted_at IS NULL AND l.deleted_at IS NULL LIMIT 1');
         $statement->execute(['id'=>$quizId,'family_id'=>$familyId,'student_id'=>$studentId]);
         $question=$statement->fetch();
         if (!$question) Http::error('not_found','Тест не найден в вашей программе',404);
@@ -84,6 +84,7 @@ final class QuizApi
         try {
             $db->prepare('INSERT INTO quiz_attempts (id,family_id,student_id,activity_id,score) VALUES (:id,:family_id,:student_id,:activity_id,:score)')->execute(['id'=>$attemptId,'family_id'=>$familyId,'student_id'=>$studentId,'activity_id'=>$quizId,'score'=>$correct?100:0]);
             $db->prepare('INSERT INTO quiz_answers (id,attempt_id,question_id,answer_json,is_correct) VALUES (:id,:attempt_id,:question_id,:answer,:correct)')->execute(['id'=>Uuid::v4(),'attempt_id'=>$attemptId,'question_id'=>$question['id'],'answer'=>json_encode($answer,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),'correct'=>$correct?1:0]);
+            Mastery::record($db,$familyId,$studentId,(string)$question['topic_id'],'quiz',$attemptId,$correct,$correct?100:0,$correct?'Тест выполнен верно.':'В тесте допущена ошибка — тему стоит повторить.');
             Audit::record($db,$familyId,'student',$studentId,'quiz.attempted','activity',$quizId,['score'=>$correct?100:0]);
             $db->commit();
         } catch (\Throwable $error) { $db->rollBack(); throw $error; }

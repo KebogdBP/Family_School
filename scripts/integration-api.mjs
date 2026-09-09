@@ -138,6 +138,8 @@ const numberAttempt = await request(`/student/quizzes/${numberQuiz.quiz.id}/atte
 assert(numberAttempt.attempt.correct, 'Numeric answer was rejected')
 const textAttempt = await request(`/student/quizzes/${textQuiz.quiz.id}/attempts`, { method: 'POST', body: JSON.stringify({ textAnswer: '  ЗНАМЕНАТЕЛЬ  ' }) })
 assert(textAttempt.attempt.correct, 'Normalized short-text answer was rejected')
+const learningMastery = await request('/student/mastery')
+assert(learningMastery.topics[0].status === 'learning' && learningMastery.topics[0].evidenceCount === 5, 'Quiz evidence did not update topic mastery')
 await request(`/student/homeworks/${homework.homework.id}/submission`, { method: 'PUT', body: JSON.stringify({ responseText: 'Если разделить две части из четырёх, получится половина.', submit: false }) })
 const attachment = new FormData()
 attachment.set('file', new File([
@@ -170,6 +172,8 @@ const davidLessons = await request('/student/lessons')
 assert(davidLessons.lessons.length === 0, 'David must not see Sara lessons')
 const davidToday = await request('/student/today')
 assert(davidToday.lessons.length === 0, 'David must not see Sara plan')
+const davidMastery = await request('/student/mastery')
+assert(davidMastery.topics.length === 0, 'David must not see Sara mastery evidence')
 const forbiddenFile = await fetch(new URL(uploaded.file.url, baseUrl), { headers: { Cookie: cookie } })
 assert(forbiddenFile.status === 404, 'David must not access Sara attachment')
 
@@ -190,5 +194,7 @@ assert(fileResponse.ok && fileResponse.headers.get('content-type') === 'image/pn
 await request(`/submissions/${queue.submissions[0].id}/reviews`, { method: 'POST', body: JSON.stringify({ decision: 'accepted', grade: 5, comment: 'Верно и понятно объяснено.' }) })
 const reviewedQueue = await request('/review-submissions')
 assert(reviewedQueue.submissions[0].status === 'reviewed', 'Homework review was not saved')
+const masteryReport = await request(`/students/${sara.student.id}/progress-report`)
+assert(masteryReport.mastery[0].status === 'needs_reinforcement' && masteryReport.summary.topicsToReview === 1, 'Homework evidence did not schedule topic review')
 
-console.log('Integration OK: plans, quizzes, homework with private files, reviews, reflections and reports are persistent')
+console.log('Integration OK: plans, quizzes, homework, private files, mastery evidence, reviews and reports are persistent')

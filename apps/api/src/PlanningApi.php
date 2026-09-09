@@ -117,7 +117,10 @@ final class PlanningApi
             $summary[$key]++;
             if (($item['reflection']['feeling'] ?? null) === 'need_help') $summary['needsHelp']++;
         }
-        Http::json(['summary'=>$summary,'items'=>$items]);
+        $mastery=Mastery::topics($db,$familyId,$studentId);
+        $summary['masteredTopics']=count(array_filter($mastery,static fn(array $topic):bool=>$topic['status']==='mastered'));
+        $summary['topicsToReview']=count(array_filter($mastery,static fn(array $topic):bool=>$topic['status']==='needs_reinforcement'));
+        Http::json(['summary'=>$summary,'items'=>$items,'mastery'=>$mastery]);
     }
 
     private static function removeItem(PDO $db, string $familyId, string $actorId, string $id): never
