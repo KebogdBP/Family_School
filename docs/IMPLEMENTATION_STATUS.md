@@ -54,7 +54,10 @@
 - [x] lesson editor for text, example, link, video and image blocks
 - [x] block editing, deletion and ordering
 - [x] Docker Compose environment with MySQL 8.4 and PHP 8.3
+- [x] migration 003 for per-student lesson progress
+- [x] student-only lesson list and lesson progress API
+- [x] student lesson screen with focus mode and resumable block progress
 
 ## Следующая задача
 
-После завершения фоновой установки PHP/MySQL применить `001_initial.sql` и `002_curriculum.sql`, затем выполнить `npm run test:api:integration`. Параллельный продуктовый шаг — CRUD API для учебной программы.
+Недельный план: родитель назначает конкретные уроки на даты, а экран «Сегодня» показывает обязательный минимум и дополнительные задачи.

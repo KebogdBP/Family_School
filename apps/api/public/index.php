@@ -9,6 +9,7 @@ use HomeEdu\Database;
 use HomeEdu\Env;
 use HomeEdu\Http;
 use HomeEdu\RateLimiter;
+use HomeEdu\StudentLearningApi;
 use HomeEdu\Uuid;
 
 require dirname(__DIR__) . '/bootstrap.php';
@@ -32,6 +33,7 @@ try {
         $method === 'GET' && $path === '/api/v1/students' => listStudents($db),
         $method === 'POST' && $path === '/api/v1/students' => createStudent($db),
         $method === 'PATCH' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/pin$#', $path, $matches) === 1 => updateStudentPin($db, $matches[1]),
+        str_starts_with($path, '/api/v1/student/') => StudentLearningApi::dispatch($db, $method, $path),
         default => CurriculumApi::dispatch($db, $method, $path),
     };
 } catch (Throwable $error) {

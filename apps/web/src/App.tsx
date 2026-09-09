@@ -7,6 +7,8 @@ import { createStudent, getStudents, type Student } from '@/entities/student/api
 import { ApiError } from '@/shared/api/client'
 import { CurriculumPage } from '@/pages/CurriculumPage'
 import { LessonEditorPage } from '@/pages/LessonEditorPage'
+import { StudentLessonPage } from '@/pages/StudentLessonPage'
+import { getStudentLessons, type StudentLessonSummary } from '@/entities/learning/api'
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
@@ -127,7 +129,15 @@ function ChildrenPage() {
 }
 
 function TodayPage({ principal }: { principal: Principal }) {
-  return <><header className="page-header"><p className="eyebrow">Мой учебный день</p><h1>Привет, {principal.displayName}!</h1><p className="muted">Здесь появятся уроки и задания для {principal.grade} класса.</p></header><section className="card empty"><span className="badge">Следующий этап</span><h2>Учебный план готовится</h2><p className="muted">Сначала родитель добавит предметы, темы и уроки. Затем здесь появится план на сегодня.</p></section></>
+  const lessons = useQuery({ queryKey: ['student-lessons'], queryFn: getStudentLessons })
+  const completed = lessons.data?.lessons.filter((lesson) => lesson.progress.status === 'completed').length ?? 0
+  return <><header className="page-header"><p className="eyebrow">Мои уроки</p><h1>Привет, {principal.displayName}!</h1><p className="muted">{principal.grade} класс · пройдено {completed} из {lessons.data?.lessons.length ?? 0}</p></header><ErrorText error={lessons.error} />{lessons.isLoading ? <p>Собираем твою программу…</p> : lessons.data?.lessons.length ? <section className="student-lessons">{lessons.data.lessons.map((lesson) => <StudentLessonCard key={lesson.id} lesson={lesson} />)}</section> : <section className="card empty"><h2>Уроков пока нет</h2><p className="muted">Когда родитель добавит уроки в твою программу, они появятся здесь.</p></section>}</>
+}
+
+function StudentLessonCard({ lesson }: { lesson: StudentLessonSummary }) {
+  const labels = { not_started: 'Начать', in_progress: 'Продолжить', completed: 'Пройдено' }
+  const percent = lesson.progress.status === 'completed' ? 100 : lesson.blockCount ? Math.round((lesson.progress.lastBlockPosition / lesson.blockCount) * 100) : 0
+  return <article className="card student-lesson-card" style={{ borderTopColor: lesson.subjectColor }}><div className="lesson-card-heading"><span className="badge" style={{ color: lesson.subjectColor }}>{lesson.subjectTitle}</span><span className={`lesson-status status-${lesson.progress.status}`}>{labels[lesson.progress.status]}</span></div><h2>{lesson.title}</h2><p className="muted">{lesson.sectionTitle} · {lesson.topicTitle}</p>{lesson.summary && <p>{lesson.summary}</p>}<div className="progress-track"><div style={{ width: `${percent}%`, background: lesson.subjectColor }} /></div><div className="lesson-card-footer"><small>{lesson.blockCount} шагов{lesson.estimatedMinutes ? ` · ${lesson.estimatedMinutes} мин` : ''}</small><NavLink className="button-link" to={`/study/lessons/${lesson.id}`}>{labels[lesson.progress.status]} →</NavLink></div></article>
 }
 
 function RoutedApp() {
@@ -136,7 +146,7 @@ function RoutedApp() {
   const session = useQuery({ queryKey: ['me'], queryFn: getMe })
   useEffect(() => { if (session.data) setPrincipal(session.data.principal); if (session.error instanceof ApiError && session.error.status === 401) setPrincipal(null) }, [session.data, session.error, setPrincipal])
   if (session.isLoading) return <main className="splash"><div className="brand brand-dark">Home<span>Edu</span></div><p>Проверяем сессию…</p></main>
-  return <Routes><Route path="/login" element={principal ? <Navigate to={principal.role === 'parent' ? '/children' : '/today'} replace /> : <LoginPage />} /><Route path="/setup" element={principal ? <Navigate to="/children" replace /> : <SetupPage />} /><Route path="/children" element={principal?.role === 'parent' ? <AppShell principal={principal}><ChildrenPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} /><Route path="/children/:studentId/curriculum" element={principal?.role === 'parent' ? <AppShell principal={principal}><CurriculumPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} /><Route path="/lessons/:lessonId/edit" element={principal?.role === 'parent' ? <AppShell principal={principal}><LessonEditorPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} /><Route path="/today" element={principal?.role === 'student' ? <AppShell principal={principal}><TodayPage principal={principal} /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} /><Route path="*" element={<Navigate to={principal?.role === 'student' ? '/today' : principal ? '/children' : '/login'} replace />} /></Routes>
+  return <Routes><Route path="/login" element={principal ? <Navigate to={principal.role === 'parent' ? '/children' : '/today'} replace /> : <LoginPage />} /><Route path="/setup" element={principal ? <Navigate to="/children" replace /> : <SetupPage />} /><Route path="/children" element={principal?.role === 'parent' ? <AppShell principal={principal}><ChildrenPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} /><Route path="/children/:studentId/curriculum" element={principal?.role === 'parent' ? <AppShell principal={principal}><CurriculumPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} /><Route path="/lessons/:lessonId/edit" element={principal?.role === 'parent' ? <AppShell principal={principal}><LessonEditorPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} /><Route path="/today" element={principal?.role === 'student' ? <AppShell principal={principal}><TodayPage principal={principal} /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} /><Route path="/study/lessons/:lessonId" element={principal?.role === 'student' ? <AppShell principal={principal}><StudentLessonPage /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} /><Route path="*" element={<Navigate to={principal?.role === 'student' ? '/today' : principal ? '/children' : '/login'} replace />} /></Routes>
 }
 
 export function App() {

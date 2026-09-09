@@ -96,5 +96,26 @@ await request('/auth/student/login', {
 })
 const student = await request('/me')
 assert(student.principal.displayName === 'Сара' && student.principal.grade === 6, 'Sara login failed')
+const studentLessons = await request('/student/lessons')
+assert(studentLessons.lessons.length === 1, 'Sara must see her assigned lesson')
+assert(studentLessons.lessons[0].progress.status === 'not_started', 'New lesson must not be started')
+const studentLesson = await request(`/student/lessons/${lesson.lesson.id}`)
+assert(studentLesson.lesson.blocks.length === 2, 'Student lesson must contain ordered blocks')
+await request(`/student/lessons/${lesson.lesson.id}/progress`, {
+  method: 'PATCH', body: JSON.stringify({ lastBlockPosition: 1, completed: false }),
+})
+await request(`/student/lessons/${lesson.lesson.id}/progress`, {
+  method: 'PATCH', body: JSON.stringify({ lastBlockPosition: 2, completed: true }),
+})
+const completedLessons = await request('/student/lessons')
+assert(completedLessons.lessons[0].progress.status === 'completed', 'Lesson completion was not saved')
 
-console.log('Integration OK: auth, Sara and David, curriculum tree, lesson blocks, parent login, Sara PIN login')
+await request('/auth/logout', { method: 'POST' })
+cookie = ''
+await request('/auth/student/login', {
+  method: 'POST', body: JSON.stringify({ studentId: david.student.id, pin: '1004' }),
+})
+const davidLessons = await request('/student/lessons')
+assert(davidLessons.lessons.length === 0, 'David must not see Sara lessons')
+
+console.log('Integration OK: auth, separate students, curriculum, lesson content and persistent student progress')

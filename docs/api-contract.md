@@ -98,6 +98,9 @@ PIN принимается только как строка из 4–8 цифр 
 |---|---|---|
 | GET | `/lessons/{id}/content` | урок и упорядоченные блоки |
 | POST | `/lessons/{id}/blocks` | добавить блок |
+| GET | `/student/lessons` | уроки текущего ученика с личным прогрессом |
+| GET | `/student/lessons/{id}` | доступный ученику урок и его блоки |
+| PATCH | `/student/lessons/{id}/progress` | сохранить позицию или завершение урока |
 | PATCH | `/content-blocks/{id}` | изменить содержимое, тип или позицию |
 | DELETE | `/content-blocks/{id}` | удалить блок |
 
