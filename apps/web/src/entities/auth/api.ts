@@ -31,3 +31,6 @@ export const setupFamily = (input: {
 }
 
 export const logout = () => api<{ status: string }>('/auth/logout', { method: 'POST' })
+
+export type FamilyExport = { schemaVersion: number; generatedAt: string; family: { id: string; name: string }; data: Record<string, Array<Record<string, unknown>>> }
+export const exportFamilyData = () => api<FamilyExport>('/family/export')

@@ -93,7 +93,8 @@
 - [x] unified weekly plan status derived from lesson progress and homework review state
 - [x] server-calculated parent daily digest with completion, review queue and help signals
 - [x] weekly digest with plan completion, mastered topics, completed reviews, difficulties and deterministic next-plan suggestions
+- [x] parent-only versioned JSON export without credentials, sessions, storage names or file contents
 
 ## Следующая задача
 
-Добавить безопасный экспорт данных семьи в машиночитаемом формате.
+Добавить подтверждаемое полное удаление профиля ребёнка и связанных файлов.

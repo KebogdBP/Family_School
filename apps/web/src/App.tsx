@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type FormEvent, type ReactNode, useEffect, useState } from 'react'
 import { Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
-import { getMe, loginParent, loginStudent, logout, setupFamily } from '@/entities/auth/api'
+import { exportFamilyData, getMe, loginParent, loginStudent, logout, setupFamily, type FamilyExport } from '@/entities/auth/api'
 import { useAuthStore, type Principal } from '@/entities/auth/model'
 import { createStudent, getStudents, type Student } from '@/entities/student/api'
 import { ApiError } from '@/shared/api/client'
@@ -130,8 +130,10 @@ function ChildrenPage() {
   const setPrincipal = useAuthStore((state) => state.setPrincipal)
   const students = useQuery({ queryKey: ['students'], queryFn: getStudents })
   const [showForm, setShowForm] = useState(false)
+  const download = (data: FamilyExport) => { const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=`homeedu-family-${data.generatedAt.slice(0,10)}.json`;document.body.append(link);link.click();link.remove();URL.revokeObjectURL(url) }
+  const familyExport = useMutation({ mutationFn: exportFamilyData, onSuccess: download })
   const loggedIn = (principal: Principal) => { setPrincipal(principal); client.clear(); void navigate('/today', { replace: true }) }
-  return <><header className="page-header"><p className="eyebrow">Семейное пространство</p><div className="header-row"><div><h1>Ученики</h1><p className="muted">Выберите профиль или добавьте нового ребёнка.</p></div><button onClick={() => setShowForm((value) => !value)}>{showForm ? 'Закрыть' : '+ Добавить ребёнка'}</button></div></header>{showForm && <CreateStudentForm onDone={() => { void client.invalidateQueries({ queryKey: ['students'] }); setShowForm(false) }} />}<ErrorText error={students.error} />{students.isLoading ? <p>Загружаем профили…</p> : <section className="children-grid">{students.data?.students.map((student) => <StudentCard key={student.id} student={student} onLoggedIn={loggedIn} />)}{students.data?.students.length === 0 && <div className="card empty"><h2>Пока нет учеников</h2><p className="muted">Добавьте Сару и Давида, укажите класс и отдельный PIN для каждого.</p></div>}</section>}</>
+  return <><header className="page-header"><p className="eyebrow">Семейное пространство</p><div className="header-row"><div><h1>Ученики</h1><p className="muted">Выберите профиль или добавьте нового ребёнка.</p></div><div className="header-actions"><button className="button-ghost" disabled={familyExport.isPending} onClick={() => familyExport.mutate()}>{familyExport.isPending ? 'Готовим экспорт…' : 'Скачать данные'}</button><button onClick={() => setShowForm((value) => !value)}>{showForm ? 'Закрыть' : '+ Добавить ребёнка'}</button></div></div></header>{showForm && <CreateStudentForm onDone={() => { void client.invalidateQueries({ queryKey: ['students'] }); setShowForm(false) }} />}<ErrorText error={students.error ?? familyExport.error} />{students.isLoading ? <p>Загружаем профили…</p> : <section className="children-grid">{students.data?.students.map((student) => <StudentCard key={student.id} student={student} onLoggedIn={loggedIn} />)}{students.data?.students.length === 0 && <div className="card empty"><h2>Пока нет учеников</h2><p className="muted">Добавьте Сару и Давида, укажите класс и отдельный PIN для каждого.</p></div>}</section>}</>
 }
 
 function TodayPage({ principal }: { principal: Principal }) {

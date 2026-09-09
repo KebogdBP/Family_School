@@ -7,6 +7,7 @@ use HomeEdu\Auth;
 use HomeEdu\CurriculumApi;
 use HomeEdu\Database;
 use HomeEdu\Env;
+use HomeEdu\FamilyExportApi;
 use HomeEdu\Http;
 use HomeEdu\HomeworkApi;
 use HomeEdu\PlanningApi;
@@ -34,6 +35,7 @@ try {
         $method === 'POST' && $path === '/api/v1/auth/student/login' => loginStudent($db),
         $method === 'POST' && $path === '/api/v1/auth/logout' => logout($db),
         $method === 'GET' && $path === '/api/v1/me' => currentPrincipal($db),
+        $method === 'GET' && $path === '/api/v1/family/export' => FamilyExportApi::export($db),
         $method === 'GET' && $path === '/api/v1/students' => listStudents($db),
         $method === 'POST' && $path === '/api/v1/students' => createStudent($db),
         $method === 'PATCH' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/pin$#', $path, $matches) === 1 => updateStudentPin($db, $matches[1]),
