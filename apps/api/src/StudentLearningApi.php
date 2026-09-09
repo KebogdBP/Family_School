@@ -82,7 +82,31 @@ final class StudentLearningApi
             $lesson['isRequired'] = (bool) $row['is_required'];
             return $lesson;
         }, $statement->fetchAll());
-        Http::json(['date' => date('Y-m-d'), 'lessons' => $lessons, 'reviewTasks'=>Mastery::reviewTasks($db,$familyId,$studentId,true)]);
+        Http::json(['date' => date('Y-m-d'), 'lessons' => $lessons, 'continueLesson'=>self::lastInProgressLesson($db,$familyId,$studentId), 'reviewTasks'=>Mastery::reviewTasks($db,$familyId,$studentId,true)]);
+    }
+
+    /** @return array<string,mixed>|null */
+    private static function lastInProgressLesson(PDO $db,string $familyId,string $studentId): ?array
+    {
+        $statement=$db->prepare(
+            'SELECT l.id,l.title,l.summary,l.estimated_minutes,l.position,
+                    s.title AS subject_title,s.color AS subject_color,se.title AS section_title,t.title AS topic_title,
+                    lp.status AS progress_status,lp.last_block_position,lp.updated_at,
+                    (SELECT COUNT(*) FROM content_blocks cb WHERE cb.lesson_id=l.id) AS block_count
+             FROM lesson_progress lp JOIN lessons l ON l.id=lp.lesson_id AND l.deleted_at IS NULL
+             JOIN topics t ON t.id=l.topic_id AND t.deleted_at IS NULL
+             JOIN sections se ON se.id=t.section_id AND se.deleted_at IS NULL
+             JOIN curriculum_subjects cs ON cs.id=se.curriculum_subject_id
+             JOIN curricula c ON c.id=cs.curriculum_id AND c.deleted_at IS NULL AND c.is_active=TRUE
+             JOIN subjects s ON s.id=cs.subject_id AND s.deleted_at IS NULL
+             WHERE lp.family_id=:family_id AND lp.student_id=:student_id AND lp.status=\'in_progress\'
+                   AND c.family_id=:curriculum_family AND c.student_id=:curriculum_student
+             ORDER BY lp.updated_at DESC LIMIT 1'
+        );
+        $statement->execute(['family_id'=>$familyId,'student_id'=>$studentId,'curriculum_family'=>$familyId,'curriculum_student'=>$studentId]);
+        $row=$statement->fetch();
+        if(!$row)return null;
+        return self::lessonSummary($row)+['lastActivityAt'=>$row['updated_at']];
     }
 
     private static function lesson(PDO $db, string $familyId, string $studentId, string $lessonId): never

@@ -159,11 +159,14 @@ assert(submitted.submission.status === 'submitted', 'Homework was not submitted'
 await request(`/student/lessons/${lesson.lesson.id}/progress`, {
   method: 'PATCH', body: JSON.stringify({ lastBlockPosition: 1, completed: false }),
 })
+const resumedToday = await request('/student/today')
+assert(resumedToday.continueLesson?.id === lesson.lesson.id && resumedToday.continueLesson.progress.status === 'in_progress', 'Last in-progress lesson is not available to continue')
 await request(`/student/lessons/${lesson.lesson.id}/progress`, {
   method: 'PATCH', body: JSON.stringify({ lastBlockPosition: 2, completed: true }),
 })
 const completedLessons = await request('/student/lessons')
 assert(completedLessons.lessons[0].progress.status === 'completed', 'Lesson completion was not saved')
+assert((await request('/student/today')).continueLesson === null, 'Completed lesson must not remain available to continue')
 await request(`/student/lessons/${lesson.lesson.id}/reflection`, {
   method: 'POST', body: JSON.stringify({ feeling: 'need_help', comment: 'Нужно повторить знаменатели' }),
 })

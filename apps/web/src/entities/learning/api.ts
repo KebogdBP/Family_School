@@ -16,6 +16,7 @@ export type SubmissionFile = { id: string; originalName: string; mimeType: strin
 export type StudentHomework = { id: string; title: string; instructions: string; submission: null | { id: string; responseText: string; status: 'draft' | 'submitted' | 'needs_revision' | 'reviewed'; reviewComment: string | null; reviewGrade: number | null; files: SubmissionFile[] } }
 export type StudentLesson = StudentLessonSummary & { blocks: LessonBlock[]; quizzes: StudentQuiz[]; homeworks: StudentHomework[]; reflection: Reflection | null }
 export type TodayLesson = StudentLessonSummary & { planItemId: string; isRequired: boolean }
+export type ContinueLesson = StudentLessonSummary & { lastActivityAt: string }
 export type ReviewTask = { id: string; topicId: string; topicTitle: string; subjectTitle: string; subjectColor: string; lessonId: string | null; dueDate: string; reason: string; isDue: boolean }
 export type ReviewQuestion = { id: string; prompt: string; questionType: QuestionType; options: string[] }
 export type MasteryTopic = { id: string; title: string; sectionTitle: string; subjectTitle: string; subjectColor: string; status: 'available' | 'learning' | 'needs_reinforcement' | 'mastered'; score: number; evidenceCount: number; successfulCount: number; nextReviewAt: string | null; evidence: string[] }
@@ -23,7 +24,7 @@ export type MasterySubject = { id: string; title: string; color: string; topicCo
 export type Achievement = { id: string; code: 'independent_revision' | 'independent_explanation' | 'durable_mastery'; title: string; description: string; earnedAt: string }
 
 export const getStudentLessons = () => api<{ lessons: StudentLessonSummary[] }>('/student/lessons')
-export const getTodayLessons = () => api<{ date: string; lessons: TodayLesson[]; reviewTasks: ReviewTask[] }>('/student/today')
+export const getTodayLessons = () => api<{ date: string; lessons: TodayLesson[]; continueLesson: ContinueLesson | null; reviewTasks: ReviewTask[] }>('/student/today')
 export const getStudentMastery = () => api<{ subjects: MasterySubject[]; topics: MasteryTopic[] }>('/student/mastery')
 export const getStudentAchievements = () => api<{ achievements: Achievement[] }>('/student/achievements')
 export const getStudentReviewTasks = () => api<{ reviewTasks: ReviewTask[] }>('/student/reviews')

@@ -105,7 +105,7 @@ PIN принимается только как строка из 4–8 цифр 
 | GET | `/students/{id}/weekly-plan?weekStart=YYYY-MM-DD` | недельный план и доступные уроки |
 | POST | `/students/{id}/plan-items` | назначить урок на день |
 | DELETE | `/plan-items/{id}` | убрать назначение |
-| GET | `/student/today` | назначенные текущему ученику уроки на сегодня |
+| GET | `/student/today` | назначенные уроки на сегодня и последнее незавершённое занятие в `continueLesson` |
 | GET | `/student/mastery` | личная карта освоения тем и рекомендации повторения |
 | GET | `/student/achievements` | личные достижения текущего ученика |
 | GET | `/student/reviews` | предстоящие и просроченные задания на повторение |
