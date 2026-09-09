@@ -84,7 +84,10 @@
 - [x] parent UI for evidence thresholds, successful work types and review interval
 - [x] automatic personal review tasks generated from mastery schedule
 - [x] due review tasks on Today and upcoming reviews on student Progress page
+- [x] migration 013 for review attempts and per-question answers
+- [x] short review quiz assembled from up to three existing topic questions
+- [x] parent review rescheduling and automatic task completion after a passing score
 
 ## Следующая задача
 
-Добавить отдельную короткую контрольную для повторения вместо повторного открытия всего урока.
+Добавить редактор вопросов повторения, чтобы родитель мог выбирать их явно.

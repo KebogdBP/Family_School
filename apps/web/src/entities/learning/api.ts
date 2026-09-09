@@ -17,6 +17,7 @@ export type StudentHomework = { id: string; title: string; instructions: string;
 export type StudentLesson = StudentLessonSummary & { blocks: LessonBlock[]; quizzes: StudentQuiz[]; homeworks: StudentHomework[]; reflection: Reflection | null }
 export type TodayLesson = StudentLessonSummary & { planItemId: string; isRequired: boolean }
 export type ReviewTask = { id: string; topicId: string; topicTitle: string; subjectTitle: string; subjectColor: string; lessonId: string | null; dueDate: string; reason: string; isDue: boolean }
+export type ReviewQuestion = { id: string; prompt: string; questionType: QuestionType; options: string[] }
 export type MasteryTopic = { id: string; title: string; sectionTitle: string; subjectTitle: string; subjectColor: string; status: 'available' | 'learning' | 'needs_reinforcement' | 'mastered'; score: number; evidenceCount: number; successfulCount: number; nextReviewAt: string | null; evidence: string[] }
 export type MasterySubject = { id: string; title: string; color: string; topicCount: number; masteredCount: number; reviewCount: number; score: number }
 export type Achievement = { id: string; code: 'independent_revision' | 'independent_explanation' | 'durable_mastery'; title: string; description: string; earnedAt: string }
@@ -26,6 +27,8 @@ export const getTodayLessons = () => api<{ date: string; lessons: TodayLesson[];
 export const getStudentMastery = () => api<{ subjects: MasterySubject[]; topics: MasteryTopic[] }>('/student/mastery')
 export const getStudentAchievements = () => api<{ achievements: Achievement[] }>('/student/achievements')
 export const getStudentReviewTasks = () => api<{ reviewTasks: ReviewTask[] }>('/student/reviews')
+export const getReviewSession = (id: string) => api<{ review: { id: string; topicTitle: string; subjectTitle: string; subjectColor: string; dueDate: string; questions: ReviewQuestion[] } }>(`/student/reviews/${id}`)
+export const submitReviewSession = (id: string, answers: Array<QuizAnswer & { questionId: string }>) => api<{ attempt: { id: string; score: number; successful: boolean; results: Array<{ questionId: string; correct: boolean; explanation: string | null }> } }>(`/student/reviews/${id}`, { method: 'POST', body: JSON.stringify({ answers }) })
 export const getStudentLesson = (lessonId: string) => api<{ lesson: StudentLesson }>(`/student/lessons/${lessonId}`)
 export const saveLessonProgress = (lessonId: string, lastBlockPosition: number, completed = false) =>
   api<{ progress: Progress }>(`/student/lessons/${lessonId}/progress`, {

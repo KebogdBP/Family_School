@@ -23,6 +23,8 @@ final class PlanningApi
                 => self::addItem($db, $familyId, $actorId, $m[1]),
             $method === 'DELETE' && preg_match('#^/api/v1/plan-items/([0-9a-f-]{36})$#', $path, $m) === 1
                 => self::removeItem($db, $familyId, $actorId, $m[1]),
+            $method === 'PATCH' && preg_match('#^/api/v1/review-schedules/([0-9a-f-]{36})$#', $path, $m) === 1
+                => self::rescheduleReview($db, $familyId, $actorId, $m[1]),
             default => Http::error('not_found', 'Маршрут не найден', 404),
         };
     }
@@ -131,6 +133,11 @@ final class PlanningApi
         if ($statement->rowCount() === 0) Http::error('not_found', 'Пункт плана не найден', 404);
         Audit::record($db, $familyId, 'parent', $actorId, 'plan_item.deleted', 'plan_item', $id);
         Http::json(['status' => 'ok']);
+    }
+
+    private static function rescheduleReview(PDO $db,string $familyId,string $actorId,string $id): never
+    {
+        $date=self::date((string)(Http::body()['dueDate']??''));$s=$db->prepare('UPDATE review_schedule SET due_date=:due_date WHERE id=:id AND family_id=:family_id AND status=\'pending\'');$s->execute(['due_date'=>$date,'id'=>$id,'family_id'=>$familyId]);if($s->rowCount()===0)Http::error('not_found','Активное повторение не найдено',404);$db->prepare('UPDATE mastery_states ms JOIN review_schedule rs ON rs.student_id=ms.student_id AND rs.topic_id=ms.topic_id SET ms.next_review_at=:due_date WHERE rs.id=:id')->execute(['due_date'=>$date,'id'=>$id]);Audit::record($db,$familyId,'parent',$actorId,'review.rescheduled','review_schedule',$id,['dueDate'=>$date]);Http::json(['reviewTask'=>['id'=>$id,'dueDate'=>$date]]);
     }
 
     private static function assertStudent(PDO $db, string $familyId, string $studentId): void

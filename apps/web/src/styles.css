@@ -186,6 +186,9 @@ h2 { margin-bottom: 4px; }
 .review-task { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 16px; border-left: 5px solid #f79009; }
 .review-task h3, .review-task p { margin: 8px 0 0; }
 .review-task-due { background: #fffaeb; }
+.review-session { max-width: 820px; margin: 0 auto; }
+.review-questions { display: grid; gap: 18px; padding-bottom: 50px; }
+.review-questions > button { justify-self: end; min-width: 220px; }
 .achievement-summary { margin: 24px 0; }
 .achievements { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .achievement-card { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 16px; border-color: #fdb022; background: #fffcf0; }

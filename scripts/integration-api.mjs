@@ -216,10 +216,29 @@ assert(masteryReport.achievements.some((item) => item.code === 'independent_revi
 assert(masteryReport.achievements.some((item) => item.code === 'independent_explanation'), 'Independent explanation achievement was not awarded')
 assert(masteryReport.summary.achievements === 2, 'Achievement count is incorrect')
 assert(masteryReport.masterySubjects[0].title === 'Математика' && masteryReport.masterySubjects[0].score > 0, 'Subject progress was not calculated')
+await request('/auth/logout', { method: 'POST' }); cookie = ''
+await request('/auth/student/login', { method: 'POST', body: JSON.stringify({ studentId: david.student.id, pin: '1004' }) })
+const foreignReview = await fetch(`${baseUrl}/student/reviews/${masteryReport.reviewTasks[0].id}`, { headers: { Cookie: cookie } })
+assert(foreignReview.status === 404, 'David must not access Sara review quiz')
+await request('/auth/logout', { method: 'POST' }); cookie = ''
+await request('/auth/parent/login', { method: 'POST', body: JSON.stringify({ email: 'parent@homeedu.test', password: 'HomeEdu-test-2026!' }) })
+await request(`/review-schedules/${masteryReport.reviewTasks[0].id}`, { method: 'PATCH', body: JSON.stringify({ dueDate: scheduledDate }) })
 
 await request('/auth/logout', { method: 'POST' }); cookie = ''
 await request('/auth/student/login', { method: 'POST', body: JSON.stringify({ studentId: sara.student.id, pin: '1206' }) })
 const studentReviews = await request('/student/reviews')
-assert(studentReviews.reviewTasks.length === 1 && !studentReviews.reviewTasks[0].isDue, 'Sara upcoming review task is missing')
+assert(studentReviews.reviewTasks.length === 1 && studentReviews.reviewTasks[0].isDue, 'Sara due review task is missing')
+const reviewSession = await request(`/student/reviews/${studentReviews.reviewTasks[0].id}`)
+assert(reviewSession.review.questions.length === 3 && reviewSession.review.questions[0].correctAnswer === undefined, 'Short review questions are incorrect or leak answers')
+const reviewAttempt = await request(`/student/reviews/${studentReviews.reviewTasks[0].id}`, { method: 'POST', body: JSON.stringify({ answers: [
+  { questionId: reviewSession.review.questions[0].id, selectedOption: 0 },
+  { questionId: reviewSession.review.questions[1].id, selectedOptions: [0, 2] },
+  { questionId: reviewSession.review.questions[2].id, numberAnswer: 0.5 },
+] }) })
+assert(reviewAttempt.attempt.successful && reviewAttempt.attempt.score === 100, 'Short review was not scored correctly')
+const mastered = await request('/student/mastery')
+assert(mastered.topics[0].status === 'mastered', 'Successful review did not master the topic')
+assert((await request('/student/reviews')).reviewTasks.length === 0, 'Completed review task stayed active')
+assert((await request('/student/achievements')).achievements.some((item) => item.code === 'durable_mastery'), 'Durable mastery achievement was not awarded')
 
-console.log('Integration OK: configurable mastery automatically creates isolated review tasks with lesson links')
+console.log('Integration OK: due review quiz is assembled, scored and closes the mastery schedule')

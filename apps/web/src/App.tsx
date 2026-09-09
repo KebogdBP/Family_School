@@ -14,6 +14,7 @@ import { ProgressReportPage } from '@/pages/ProgressReportPage'
 import { ReviewQueuePage } from '@/pages/ReviewQueuePage'
 import { StudentAchievementsPage } from '@/pages/StudentAchievementsPage'
 import { StudentProgressPage } from '@/pages/StudentProgressPage'
+import { ReviewSessionPage } from '@/pages/ReviewSessionPage'
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
@@ -138,7 +139,7 @@ function TodayPage({ principal }: { principal: Principal }) {
   const completed = lessons.data?.lessons.filter((lesson) => lesson.progress.status === 'completed').length ?? 0
   const reviews = lessons.data?.reviewTasks ?? []
   return <><header className="page-header"><p className="eyebrow">Сегодня</p><h1>Привет, {principal.displayName}!</h1><p className="muted">{principal.grade} класс · пройдено {completed} из {lessons.data?.lessons.length ?? 0}</p></header><ErrorText error={lessons.error} />
-    {reviews.length > 0 && <section className="review-reminder card"><div><span className="badge">На сегодня</span><h2>Задание на повторение</h2><p className="muted">Система назначила его по твоим сохранённым результатам.</p></div><ul>{reviews.map((task) => <li key={task.id}><strong>{task.topicTitle}</strong><span>{task.subjectTitle} · {task.reason}</span>{task.lessonId && <NavLink className="button-link button-small" to={`/study/lessons/${task.lessonId}`}>Повторить тему →</NavLink>}</li>)}</ul></section>}
+    {reviews.length > 0 && <section className="review-reminder card"><div><span className="badge">На сегодня</span><h2>Короткая контрольная</h2><p className="muted">Система выбрала несколько вопросов по теме.</p></div><ul>{reviews.map((task) => <li key={task.id}><strong>{task.topicTitle}</strong><span>{task.subjectTitle} · {task.reason}</span><NavLink className="button-link button-small" to={`/reviews/${task.id}`}>Начать повторение →</NavLink></li>)}</ul></section>}
     {lessons.isLoading ? <p>Собираем план на сегодня…</p> : lessons.data?.lessons.length ? <section className="student-lessons">{lessons.data.lessons.map((lesson) => <StudentLessonCard key={lesson.planItemId} lesson={lesson} />)}</section> : reviews.length === 0 ? <section className="card empty"><h2>На сегодня всё свободно</h2><p className="muted">В плане нет уроков и повторений.</p></section> : null}
   </>
 }
@@ -167,6 +168,7 @@ function RoutedApp() {
     <Route path="/today" element={principal?.role === 'student' ? <AppShell principal={principal}><TodayPage principal={principal} /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} />
     <Route path="/achievements" element={principal?.role === 'student' ? <AppShell principal={principal}><StudentAchievementsPage /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} />
     <Route path="/progress" element={principal?.role === 'student' ? <AppShell principal={principal}><StudentProgressPage /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} />
+    <Route path="/reviews/:reviewId" element={principal?.role === 'student' ? <AppShell principal={principal}><ReviewSessionPage /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} />
     <Route path="/study/lessons/:lessonId" element={principal?.role === 'student' ? <AppShell principal={principal}><StudentLessonPage /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} />
     <Route path="*" element={<Navigate to={principal?.role === 'student' ? '/today' : principal ? '/children' : '/login'} replace />} />
   </Routes>

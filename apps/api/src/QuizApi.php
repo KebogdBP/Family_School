@@ -122,6 +122,12 @@ final class QuizApi
         return in_array($normalize((string)$answer['value']),array_map($normalize,(array)($expected['accepted']??[])),true);
     }
 
+    /** @return array{0:array<string,mixed>,1:bool} */
+    public static function evaluate(string $type,array $body,array $expected): array
+    {
+        $answer=self::studentAnswer($type,$body);return[$answer,self::isCorrect($type,$answer,$expected)];
+    }
+
     private static function parentLesson(PDO $db,string $familyId,string $lessonId): void { $s=$db->prepare('SELECT id FROM lessons WHERE id=:id AND family_id=:family_id AND deleted_at IS NULL');$s->execute(['id'=>$lessonId,'family_id'=>$familyId]);if(!$s->fetchColumn())Http::error('not_found','Урок не найден',404); }
     /** @param array<string,mixed> $row @return array<string,mixed> */
     private static function parentQuiz(array $row): array { return ['id'=>$row['id'],'title'=>$row['title'],'instructions'=>$row['instructions'],'question'=>['id'=>$row['question_id'],'prompt'=>$row['prompt'],'questionType'=>$row['question_type'],'options'=>$row['options_json']?json_decode((string)$row['options_json'],true,flags:JSON_THROW_ON_ERROR):[],'correctAnswer'=>json_decode((string)$row['correct_answer_json'],true,flags:JSON_THROW_ON_ERROR),'explanation'=>$row['explanation']]]; }
