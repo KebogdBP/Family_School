@@ -151,7 +151,22 @@ final class PlanningApi
         $summary['masteredTopics']=count(array_filter($mastery,static fn(array $topic):bool=>$topic['status']==='mastered'));
         $summary['topicsToReview']=count(array_filter($mastery,static fn(array $topic):bool=>$topic['status']==='needs_reinforcement'));
         $achievements=Achievements::list($db,$familyId,$studentId);$summary['achievements']=count($achievements);
-        Http::json(['summary'=>$summary,'items'=>$items,'reviewTasks'=>Mastery::reviewTasks($db,$familyId,$studentId),'masterySubjects'=>Mastery::subjects($db,$familyId,$studentId),'mastery'=>$mastery,'achievements'=>$achievements]);
+        Http::json(['summary'=>$summary,'dailyDigest'=>self::dailyDigest($items),'items'=>$items,'reviewTasks'=>Mastery::reviewTasks($db,$familyId,$studentId),'masterySubjects'=>Mastery::subjects($db,$familyId,$studentId),'mastery'=>$mastery,'achievements'=>$achievements]);
+    }
+
+    /** @param array<int,array<string,mixed>> $items @return array<string,mixed> */
+    private static function dailyDigest(array $items): array
+    {
+        $today=date('Y-m-d');$todayItems=array_values(array_filter($items,static fn(array $item):bool=>$item['scheduledDate']===$today));
+        $counts=['assigned'=>0,'inProgress'=>0,'submitted'=>0,'needsRevision'=>0,'reviewed'=>0,'completedLessons'=>0,'needsHelp'=>0];$attention=[];
+        foreach($todayItems as $item){
+            $key=match($item['planStatus']){'in_progress'=>'inProgress','needs_revision'=>'needsRevision',default=>$item['planStatus']};$counts[$key]++;
+            if($item['progressStatus']==='completed')$counts['completedLessons']++;
+            $reasons=[];if($item['planStatus']==='needs_revision')$reasons[]='работу нужно доработать';if(($item['reflection']['feeling']??null)==='need_help'){$counts['needsHelp']++;$reasons[]='ребёнок попросил помощи';}
+            if($reasons!==[])$attention[]=['id'=>$item['id'],'lessonId'=>$item['lessonId'],'title'=>$item['title'],'subjectTitle'=>$item['subjectTitle'],'reasons'=>$reasons];
+        }
+        $planned=count($todayItems);$message=$planned===0?'На сегодня заданий нет.':($attention!==[]?'Есть задания, которым нужно внимание.':($counts['reviewed']===$planned?'План на сегодня полностью выполнен и проверен.':"Проверено {$counts['reviewed']} из {$planned} заданий на сегодня."));
+        return ['date'=>$today,'planned'=>$planned,...$counts,'attention'=>$attention,'message'=>$message];
     }
 
     private static function removeItem(PDO $db, string $familyId, string $actorId, string $id): never

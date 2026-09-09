@@ -91,7 +91,8 @@
 - [x] automatic question selection remains available until the parent saves a custom set
 - [x] personal “continue last lesson” action based on the latest unfinished activity
 - [x] unified weekly plan status derived from lesson progress and homework review state
+- [x] server-calculated parent daily digest with completion, review queue and help signals
 
 ## Следующая задача
 
-Добавить ежедневную сводку родителю по выполненным, отправленным и требующим внимания заданиям.
+Добавить недельную сводку с освоенными темами, повторениями, затруднениями и основой следующего плана.

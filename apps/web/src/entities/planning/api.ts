@@ -16,6 +16,7 @@ export const saveReviewQuestionSettings = (studentId: string, topicId: string, q
 
 export type ProgressReport = {
   summary: { total: number; notStarted: number; inProgress: number; completed: number; needsHelp: number; masteredTopics: number; topicsToReview: number; achievements: number }
+  dailyDigest: { date: string; planned: number; assigned: number; inProgress: number; submitted: number; needsRevision: number; reviewed: number; completedLessons: number; needsHelp: number; message: string; attention: Array<{ id: string; lessonId: string; title: string; subjectTitle: string; reasons: string[] }> }
   items: Array<{ id: string; lessonId: string; title: string; subjectTitle: string; subjectColor: string; scheduledDate: string; isRequired: boolean; progressStatus: LessonProgressStatus; planStatus: PlanItemStatus; startedAt: string | null; completedAt: string | null; reflection: { feeling: string; comment: string | null } | null }>
   mastery: MasteryTopic[]
   masterySubjects: MasterySubject[]

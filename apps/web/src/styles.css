@@ -171,6 +171,18 @@ h2 { margin-bottom: 4px; }
 .report-summary span { color: #697586; }
 .report-summary .help-summary { border-color: #f79009; background: #fffaeb; }
 .report-summary .help-summary strong { color: #b54708; }
+.daily-digest { display: grid; gap: 18px; margin-bottom: 24px; border-left: 5px solid #2563eb; }
+.daily-digest-attention { border-left-color: #f79009; background: #fffcf5; }
+.daily-digest-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.daily-digest-heading h2, .daily-digest-heading p { margin: 5px 0 0; }
+.daily-digest-heading > strong { color: #1d4ed8; font-size: 2rem; }
+.daily-digest-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.daily-digest-stats span { display: grid; gap: 3px; padding: 11px; border-radius: 9px; background: #f2f4f7; color: #475467; font-size: .82rem; }
+.daily-digest-stats strong { color: #101828; font-size: 1.25rem; }
+.daily-attention { display: grid; gap: 8px; padding-top: 13px; border-top: 1px solid #fedf89; }
+.daily-attention ul { display: grid; gap: 7px; margin: 0; }
+.daily-attention li span, .daily-attention li small { display: block; }
+.daily-attention li small { margin-top: 3px; color: #b54708; }
 .report-list { display: grid; gap: 12px; }
 .report-row { display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 14px; border-left: 5px solid #2563eb; }
 .report-row h2 { margin-top: 10px; }
@@ -293,6 +305,7 @@ h2 { margin-bottom: 4px; }
   .plan-form { grid-template-columns: 1fr; }
   .plan-form .form-error { grid-column: auto; }
   .feeling-options, .report-summary { grid-template-columns: 1fr 1fr; }
+  .daily-digest-stats { grid-template-columns: 1fr 1fr; }
   .mastery-grid, .review-reminder, .achievements, .subject-progress { grid-template-columns: 1fr; }
   .review-task { grid-template-columns: 1fr; }
   .continue-lesson { grid-template-columns: 1fr; }
