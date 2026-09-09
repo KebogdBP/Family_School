@@ -17,6 +17,8 @@ final class StudentLearningApi
         match (true) {
             $method === 'GET' && $path === '/api/v1/student/lessons'
                 => self::listLessons($db, $familyId, $studentId),
+            $method === 'GET' && $path === '/api/v1/student/today'
+                => self::today($db, $familyId, $studentId),
             $method === 'GET' && preg_match('#^/api/v1/student/lessons/([0-9a-f-]{36})$#', $path, $matches) === 1
                 => self::lesson($db, $familyId, $studentId, $matches[1]),
             $method === 'PATCH' && preg_match('#^/api/v1/student/lessons/([0-9a-f-]{36})/progress$#', $path, $matches) === 1
@@ -48,6 +50,31 @@ final class StudentLearningApi
         );
         $statement->execute(['student_id' => $studentId, 'family_id' => $familyId]);
         Http::json(['lessons' => array_map([self::class, 'lessonSummary'], $statement->fetchAll())]);
+    }
+
+    private static function today(PDO $db, string $familyId, string $studentId): never
+    {
+        $statement = $db->prepare(
+            'SELECT l.id, l.title, l.summary, l.estimated_minutes, pi.position,
+                    s.title AS subject_title, s.color AS subject_color, se.title AS section_title, t.title AS topic_title,
+                    COALESCE(lp.status, \'not_started\') AS progress_status, COALESCE(lp.last_block_position,0) AS last_block_position,
+                    (SELECT COUNT(*) FROM content_blocks cb WHERE cb.lesson_id=l.id) AS block_count,
+                    pi.id AS plan_item_id, pi.is_required
+             FROM weekly_plans wp JOIN plan_items pi ON pi.weekly_plan_id=wp.id
+             JOIN lessons l ON l.id=pi.lesson_id AND l.deleted_at IS NULL JOIN topics t ON t.id=l.topic_id
+             JOIN sections se ON se.id=t.section_id JOIN curriculum_subjects cs ON cs.id=se.curriculum_subject_id
+             JOIN subjects s ON s.id=cs.subject_id LEFT JOIN lesson_progress lp ON lp.lesson_id=l.id AND lp.student_id=wp.student_id
+             WHERE wp.student_id=:student_id AND wp.family_id=:family_id AND pi.scheduled_date=CURDATE()
+             ORDER BY pi.is_required DESC, pi.position, pi.created_at'
+        );
+        $statement->execute(['student_id' => $studentId, 'family_id' => $familyId]);
+        $lessons = array_map(static function (array $row): array {
+            $lesson = self::lessonSummary($row);
+            $lesson['planItemId'] = $row['plan_item_id'];
+            $lesson['isRequired'] = (bool) $row['is_required'];
+            return $lesson;
+        }, $statement->fetchAll());
+        Http::json(['date' => date('Y-m-d'), 'lessons' => $lessons]);
     }
 
     private static function lesson(PDO $db, string $familyId, string $studentId, string $lessonId): never

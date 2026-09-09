@@ -87,6 +87,12 @@ await request('/auth/parent/login', {
   body: JSON.stringify({ email: 'parent@homeedu.test', password: 'HomeEdu-test-2026!' }),
 })
 assert((await request('/me')).principal.role === 'parent', 'Parent login failed')
+const scheduledDate = new Date().toISOString().slice(0, 10)
+await request(`/students/${sara.student.id}/plan-items`, {
+  method: 'POST', body: JSON.stringify({ lessonId: lesson.lesson.id, scheduledDate, isRequired: true, position: 0 }),
+})
+const weeklyPlan = await request(`/students/${sara.student.id}/weekly-plan?weekStart=${scheduledDate}`)
+assert(weeklyPlan.items.length === 1, 'Parent weekly plan item was not saved')
 
 await request('/auth/logout', { method: 'POST' })
 cookie = ''
@@ -98,6 +104,8 @@ const student = await request('/me')
 assert(student.principal.displayName === 'Сара' && student.principal.grade === 6, 'Sara login failed')
 const studentLessons = await request('/student/lessons')
 assert(studentLessons.lessons.length === 1, 'Sara must see her assigned lesson')
+const todayLessons = await request('/student/today')
+assert(todayLessons.lessons.length === 1 && todayLessons.lessons[0].isRequired, 'Sara today plan is incorrect')
 assert(studentLessons.lessons[0].progress.status === 'not_started', 'New lesson must not be started')
 const studentLesson = await request(`/student/lessons/${lesson.lesson.id}`)
 assert(studentLesson.lesson.blocks.length === 2, 'Student lesson must contain ordered blocks')
@@ -117,5 +125,7 @@ await request('/auth/student/login', {
 })
 const davidLessons = await request('/student/lessons')
 assert(davidLessons.lessons.length === 0, 'David must not see Sara lessons')
+const davidToday = await request('/student/today')
+assert(davidToday.lessons.length === 0, 'David must not see Sara plan')
 
-console.log('Integration OK: auth, separate students, curriculum, lesson content and persistent student progress')
+console.log('Integration OK: auth, separate weekly plans, today view, lesson content and persistent progress')

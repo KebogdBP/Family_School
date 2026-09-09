@@ -101,6 +101,10 @@ PIN принимается только как строка из 4–8 цифр 
 | GET | `/student/lessons` | уроки текущего ученика с личным прогрессом |
 | GET | `/student/lessons/{id}` | доступный ученику урок и его блоки |
 | PATCH | `/student/lessons/{id}/progress` | сохранить позицию или завершение урока |
+| GET | `/students/{id}/weekly-plan?weekStart=YYYY-MM-DD` | недельный план и доступные уроки |
+| POST | `/students/{id}/plan-items` | назначить урок на день |
+| DELETE | `/plan-items/{id}` | убрать назначение |
+| GET | `/student/today` | назначенные текущему ученику уроки на сегодня |
 | PATCH | `/content-blocks/{id}` | изменить содержимое, тип или позицию |
 | DELETE | `/content-blocks/{id}` | удалить блок |
 

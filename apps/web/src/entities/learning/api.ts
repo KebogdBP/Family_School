@@ -9,8 +9,10 @@ export type StudentLessonSummary = {
   progress: Progress; blockCount: number
 }
 export type StudentLesson = StudentLessonSummary & { blocks: LessonBlock[] }
+export type TodayLesson = StudentLessonSummary & { planItemId: string; isRequired: boolean }
 
 export const getStudentLessons = () => api<{ lessons: StudentLessonSummary[] }>('/student/lessons')
+export const getTodayLessons = () => api<{ date: string; lessons: TodayLesson[] }>('/student/today')
 export const getStudentLesson = (lessonId: string) => api<{ lesson: StudentLesson }>(`/student/lessons/${lessonId}`)
 export const saveLessonProgress = (lessonId: string, lastBlockPosition: number, completed = false) =>
   api<{ progress: Progress }>(`/student/lessons/${lessonId}/progress`, {

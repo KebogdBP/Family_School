@@ -57,7 +57,10 @@
 - [x] migration 003 for per-student lesson progress
 - [x] student-only lesson list and lesson progress API
 - [x] student lesson screen with focus mode and resumable block progress
+- [x] migration 004 for weekly plans and dated plan items
+- [x] parent weekly planner with required and optional lessons
+- [x] isolated student "Today" view
 
 ## Следующая задача
 
-Недельный план: родитель назначает конкретные уроки на даты, а экран «Сегодня» показывает обязательный минимум и дополнительные задачи.
+Добавить добровольную самооценку после урока и показать родителю факты открытия и завершения назначений.

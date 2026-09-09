@@ -8,6 +8,7 @@ use HomeEdu\CurriculumApi;
 use HomeEdu\Database;
 use HomeEdu\Env;
 use HomeEdu\Http;
+use HomeEdu\PlanningApi;
 use HomeEdu\RateLimiter;
 use HomeEdu\StudentLearningApi;
 use HomeEdu\Uuid;
@@ -34,6 +35,7 @@ try {
         $method === 'POST' && $path === '/api/v1/students' => createStudent($db),
         $method === 'PATCH' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/pin$#', $path, $matches) === 1 => updateStudentPin($db, $matches[1]),
         str_starts_with($path, '/api/v1/student/') => StudentLearningApi::dispatch($db, $method, $path),
+        preg_match('#^/api/v1/(students/[0-9a-f-]{36}/(weekly-plan|plan-items)|plan-items/[0-9a-f-]{36})$#', $path) === 1 => PlanningApi::dispatch($db, $method, $path),
         default => CurriculumApi::dispatch($db, $method, $path),
     };
 } catch (Throwable $error) {

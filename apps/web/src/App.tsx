@@ -8,7 +8,8 @@ import { ApiError } from '@/shared/api/client'
 import { CurriculumPage } from '@/pages/CurriculumPage'
 import { LessonEditorPage } from '@/pages/LessonEditorPage'
 import { StudentLessonPage } from '@/pages/StudentLessonPage'
-import { getStudentLessons, type StudentLessonSummary } from '@/entities/learning/api'
+import { getTodayLessons, type StudentLessonSummary } from '@/entities/learning/api'
+import { WeeklyPlanPage } from '@/pages/WeeklyPlanPage'
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
@@ -115,7 +116,7 @@ function StudentCard({ student, onLoggedIn }: { student: Student; onLoggedIn: (p
     mutationFn: () => loginStudent({ studentId: student.id, pin }),
     onSuccess: async () => onLoggedIn((await getMe()).principal),
   })
-  return <article className="card child-card"><div className="avatar" style={{ background: student.avatarColor }}>{student.displayName.slice(0, 1).toUpperCase()}</div><div><h2>{student.displayName}</h2><p className="muted">{student.grade} класс{student.age ? ` · ${student.age} лет` : ''}</p></div><span className="badge">Профиль ученика</span><div className="card-actions"><NavLink className="button-link button-ghost" to={`/children/${student.id}/curriculum`}>Учебная программа</NavLink>{open ? <form className="pin-form" onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}><input aria-label={`PIN для ${student.displayName}`} autoFocus inputMode="numeric" pattern="[0-9]{4,8}" placeholder="Введите PIN" required value={pin} onChange={(event) => setPin(event.target.value)} /><button disabled={mutation.isPending}>Войти</button><ErrorText error={mutation.error} /></form> : <button onClick={() => setOpen(true)}>Перейти в профиль</button>}</div></article>
+  return <article className="card child-card"><div className="avatar" style={{ background: student.avatarColor }}>{student.displayName.slice(0, 1).toUpperCase()}</div><div><h2>{student.displayName}</h2><p className="muted">{student.grade} класс{student.age ? ` · ${student.age} лет` : ''}</p></div><span className="badge">Профиль ученика</span><div className="card-actions"><NavLink className="button-link button-ghost" to={`/children/${student.id}/curriculum`}>Учебная программа</NavLink><NavLink className="button-link button-ghost" to={`/children/${student.id}/plan`}>План недели</NavLink>{open ? <form className="pin-form" onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}><input aria-label={`PIN для ${student.displayName}`} autoFocus inputMode="numeric" pattern="[0-9]{4,8}" placeholder="Введите PIN" required value={pin} onChange={(event) => setPin(event.target.value)} /><button disabled={mutation.isPending}>Войти</button><ErrorText error={mutation.error} /></form> : <button onClick={() => setOpen(true)}>Перейти в профиль</button>}</div></article>
 }
 
 function ChildrenPage() {
@@ -129,9 +130,9 @@ function ChildrenPage() {
 }
 
 function TodayPage({ principal }: { principal: Principal }) {
-  const lessons = useQuery({ queryKey: ['student-lessons'], queryFn: getStudentLessons })
+  const lessons = useQuery({ queryKey: ['student-lessons'], queryFn: getTodayLessons })
   const completed = lessons.data?.lessons.filter((lesson) => lesson.progress.status === 'completed').length ?? 0
-  return <><header className="page-header"><p className="eyebrow">Мои уроки</p><h1>Привет, {principal.displayName}!</h1><p className="muted">{principal.grade} класс · пройдено {completed} из {lessons.data?.lessons.length ?? 0}</p></header><ErrorText error={lessons.error} />{lessons.isLoading ? <p>Собираем твою программу…</p> : lessons.data?.lessons.length ? <section className="student-lessons">{lessons.data.lessons.map((lesson) => <StudentLessonCard key={lesson.id} lesson={lesson} />)}</section> : <section className="card empty"><h2>Уроков пока нет</h2><p className="muted">Когда родитель добавит уроки в твою программу, они появятся здесь.</p></section>}</>
+  return <><header className="page-header"><p className="eyebrow">Сегодня</p><h1>Привет, {principal.displayName}!</h1><p className="muted">{principal.grade} класс · пройдено {completed} из {lessons.data?.lessons.length ?? 0}</p></header><ErrorText error={lessons.error} />{lessons.isLoading ? <p>Собираем план на сегодня…</p> : lessons.data?.lessons.length ? <section className="student-lessons">{lessons.data.lessons.map((lesson) => <StudentLessonCard key={lesson.planItemId} lesson={lesson} />)}</section> : <section className="card empty"><h2>На сегодня всё свободно</h2><p className="muted">В плане нет уроков. Можно отдохнуть или повторить пройденное.</p></section>}</>
 }
 
 function StudentLessonCard({ lesson }: { lesson: StudentLessonSummary }) {
@@ -146,7 +147,17 @@ function RoutedApp() {
   const session = useQuery({ queryKey: ['me'], queryFn: getMe })
   useEffect(() => { if (session.data) setPrincipal(session.data.principal); if (session.error instanceof ApiError && session.error.status === 401) setPrincipal(null) }, [session.data, session.error, setPrincipal])
   if (session.isLoading) return <main className="splash"><div className="brand brand-dark">Home<span>Edu</span></div><p>Проверяем сессию…</p></main>
-  return <Routes><Route path="/login" element={principal ? <Navigate to={principal.role === 'parent' ? '/children' : '/today'} replace /> : <LoginPage />} /><Route path="/setup" element={principal ? <Navigate to="/children" replace /> : <SetupPage />} /><Route path="/children" element={principal?.role === 'parent' ? <AppShell principal={principal}><ChildrenPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} /><Route path="/children/:studentId/curriculum" element={principal?.role === 'parent' ? <AppShell principal={principal}><CurriculumPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} /><Route path="/lessons/:lessonId/edit" element={principal?.role === 'parent' ? <AppShell principal={principal}><LessonEditorPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} /><Route path="/today" element={principal?.role === 'student' ? <AppShell principal={principal}><TodayPage principal={principal} /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} /><Route path="/study/lessons/:lessonId" element={principal?.role === 'student' ? <AppShell principal={principal}><StudentLessonPage /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} /><Route path="*" element={<Navigate to={principal?.role === 'student' ? '/today' : principal ? '/children' : '/login'} replace />} /></Routes>
+  return <Routes>
+    <Route path="/login" element={principal ? <Navigate to={principal.role === 'parent' ? '/children' : '/today'} replace /> : <LoginPage />} />
+    <Route path="/setup" element={principal ? <Navigate to="/children" replace /> : <SetupPage />} />
+    <Route path="/children" element={principal?.role === 'parent' ? <AppShell principal={principal}><ChildrenPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} />
+    <Route path="/children/:studentId/curriculum" element={principal?.role === 'parent' ? <AppShell principal={principal}><CurriculumPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} />
+    <Route path="/children/:studentId/plan" element={principal?.role === 'parent' ? <AppShell principal={principal}><WeeklyPlanPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} />
+    <Route path="/lessons/:lessonId/edit" element={principal?.role === 'parent' ? <AppShell principal={principal}><LessonEditorPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} />
+    <Route path="/today" element={principal?.role === 'student' ? <AppShell principal={principal}><TodayPage principal={principal} /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} />
+    <Route path="/study/lessons/:lessonId" element={principal?.role === 'student' ? <AppShell principal={principal}><StudentLessonPage /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} />
+    <Route path="*" element={<Navigate to={principal?.role === 'student' ? '/today' : principal ? '/children' : '/login'} replace />} />
+  </Routes>
 }
 
 export function App() {
