@@ -80,8 +80,17 @@ assert(content.lesson.blocks.length === 2, 'Lesson blocks are incomplete')
 const quiz = await request(`/lessons/${lesson.lesson.id}/quizzes`, {
   method: 'POST', body: JSON.stringify({ title: 'Проверка дробей', prompt: 'Какая дробь равна 1/2?', options: ['2/4', '1/3', '3/4'], correctOption: 0, explanation: '2/4 сокращается до 1/2.', position: 0 }),
 })
+const multipleQuiz = await request(`/lessons/${lesson.lesson.id}/quizzes`, {
+  method: 'POST', body: JSON.stringify({ title: 'Чётные числа', prompt: 'Выбери все чётные числа', questionType: 'multiple_choice', options: ['2', '3', '4'], correctOptions: [0, 2], explanation: 'Два и четыре делятся на два.', position: 1 }),
+})
+const numberQuiz = await request(`/lessons/${lesson.lesson.id}/quizzes`, {
+  method: 'POST', body: JSON.stringify({ title: 'Десятичная дробь', prompt: 'Запиши половину числом', questionType: 'number', correctNumber: 0.5, tolerance: 0, position: 2 }),
+})
+const textQuiz = await request(`/lessons/${lesson.lesson.id}/quizzes`, {
+  method: 'POST', body: JSON.stringify({ title: 'Термин', prompt: 'Как называется нижняя часть дроби?', questionType: 'short_text', acceptedAnswers: ['знаменатель'], position: 3 }),
+})
 const parentQuizzes = await request(`/lessons/${lesson.lesson.id}/quizzes`)
-assert(parentQuizzes.quizzes.length === 1, 'Parent quiz was not created')
+assert(parentQuizzes.quizzes.length === 4, 'All quiz question types were not created')
 const homework = await request(`/lessons/${lesson.lesson.id}/homeworks`, {
   method: 'POST', body: JSON.stringify({ title: 'Объясни дробь', instructions: 'Объясни своими словами, почему 2/4 равно 1/2.', position: 1 }),
 })
@@ -117,12 +126,18 @@ assert(todayLessons.lessons.length === 1 && todayLessons.lessons[0].isRequired, 
 assert(studentLessons.lessons[0].progress.status === 'not_started', 'New lesson must not be started')
 const studentLesson = await request(`/student/lessons/${lesson.lesson.id}`)
 assert(studentLesson.lesson.blocks.length === 2, 'Student lesson must contain ordered blocks')
-assert(studentLesson.lesson.quizzes.length === 1 && studentLesson.lesson.quizzes[0].question.correctOption === undefined, 'Quiz answer leaked to student')
+assert(studentLesson.lesson.quizzes.length === 4 && studentLesson.lesson.quizzes[0].question.correctAnswer === undefined, 'Quiz answer leaked to student')
 assert(studentLesson.lesson.homeworks.length === 1, 'Homework is missing from student lesson')
 const wrongAttempt = await request(`/student/quizzes/${quiz.quiz.id}/attempts`, { method: 'POST', body: JSON.stringify({ selectedOption: 1 }) })
 assert(wrongAttempt.attempt.score === 0 && !wrongAttempt.attempt.correct, 'Wrong quiz answer was accepted')
 const correctAttempt = await request(`/student/quizzes/${quiz.quiz.id}/attempts`, { method: 'POST', body: JSON.stringify({ selectedOption: 0 }) })
 assert(correctAttempt.attempt.score === 100 && correctAttempt.attempt.correct, 'Correct quiz answer was rejected')
+const multipleAttempt = await request(`/student/quizzes/${multipleQuiz.quiz.id}/attempts`, { method: 'POST', body: JSON.stringify({ selectedOptions: [2, 0] }) })
+assert(multipleAttempt.attempt.correct, 'Multiple-choice answer was rejected')
+const numberAttempt = await request(`/student/quizzes/${numberQuiz.quiz.id}/attempts`, { method: 'POST', body: JSON.stringify({ numberAnswer: 0.5 }) })
+assert(numberAttempt.attempt.correct, 'Numeric answer was rejected')
+const textAttempt = await request(`/student/quizzes/${textQuiz.quiz.id}/attempts`, { method: 'POST', body: JSON.stringify({ textAnswer: '  ЗНАМЕНАТЕЛЬ  ' }) })
+assert(textAttempt.attempt.correct, 'Normalized short-text answer was rejected')
 await request(`/student/homeworks/${homework.homework.id}/submission`, { method: 'PUT', body: JSON.stringify({ responseText: 'Если разделить две части из четырёх, получится половина.', submit: false }) })
 const attachment = new FormData()
 attachment.set('file', new File([

@@ -72,7 +72,9 @@
 - [x] migration 008 for private submission file metadata
 - [x] secure JPG, PNG and PDF homework uploads outside the public directory
 - [x] authenticated file delivery for the owning student and parent family
+- [x] migration 009 for multiple-choice, number and short-text quiz answers
+- [x] deterministic scoring and parent/student UI for all four quiz question types
 
 ## Следующая задача
 
-Добавить дополнительные типы тестовых вопросов: несколько вариантов, число и короткий текст.
+Добавить первые показатели освоения тем и интервальное повторение.

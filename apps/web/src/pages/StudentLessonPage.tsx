@@ -12,9 +12,21 @@ function LearningBlock({ block }: { block: LessonBlock }) {
 
 function StudentQuizCard({ quiz }: { quiz: StudentQuiz }) {
   const [selected, setSelected] = useState<number | null>(null)
-  const attempt = useMutation({ mutationFn: () => submitQuizAttempt(quiz.id, selected as number) })
+  const [selectedMany, setSelectedMany] = useState<number[]>([])
+  const [written, setWritten] = useState('')
+  const answer = quiz.question.questionType === 'single_choice' ? { selectedOption: selected ?? undefined }
+    : quiz.question.questionType === 'multiple_choice' ? { selectedOptions: selectedMany }
+      : quiz.question.questionType === 'number' ? { numberAnswer: written === '' ? undefined : Number(written) }
+        : { textAnswer: written }
+  const canSubmit = quiz.question.questionType === 'single_choice' ? selected !== null : quiz.question.questionType === 'multiple_choice' ? selectedMany.length > 0 : written.trim() !== ''
+  const attempt = useMutation({ mutationFn: () => submitQuizAttempt(quiz.id, answer) })
   const result = attempt.data?.attempt
-  return <form className="card student-quiz" onSubmit={(event) => { event.preventDefault(); attempt.mutate() }}><span className="badge">Мини-тест</span><h2>{quiz.title}</h2><p className="quiz-prompt">{quiz.question.prompt}</p><div className="quiz-options">{quiz.question.options.map((option, index) => <label className={selected === index ? 'quiz-option selected-option' : 'quiz-option'} key={`${index}-${option}`}><input type="radio" name={`quiz-${quiz.id}`} checked={selected === index} disabled={Boolean(result)} onChange={() => setSelected(index)} /><span>{option}</span></label>)}</div>{!result && <button disabled={selected === null || attempt.isPending}>Проверить ответ</button>}{result && <div className={result.correct ? 'quiz-result quiz-correct' : 'quiz-result quiz-wrong'}><strong>{result.correct ? 'Верно! Отличная работа.' : 'Пока неверно — попробуй разобраться ещё раз.'}</strong>{result.explanation && <p>{result.explanation}</p>}<button type="button" className="button-ghost" onClick={() => { setSelected(null); attempt.reset() }}>Попробовать ещё раз</button></div>}{attempt.error && <p className="form-error">{attempt.error.message}</p>}</form>
+  const reset = () => { setSelected(null); setSelectedMany([]); setWritten(''); attempt.reset() }
+  return <form className="card student-quiz" onSubmit={(event) => { event.preventDefault(); attempt.mutate() }}><span className="badge">Мини-тест</span><h2>{quiz.title}</h2><p className="quiz-prompt">{quiz.question.prompt}</p>
+    {(quiz.question.questionType === 'single_choice' || quiz.question.questionType === 'multiple_choice') && <div className="quiz-options">{quiz.question.options.map((option, index) => { const active = quiz.question.questionType === 'single_choice' ? selected === index : selectedMany.includes(index); return <label className={active ? 'quiz-option selected-option' : 'quiz-option'} key={`${index}-${option}`}><input type={quiz.question.questionType === 'single_choice' ? 'radio' : 'checkbox'} name={`quiz-${quiz.id}`} checked={active} disabled={Boolean(result)} onChange={() => quiz.question.questionType === 'single_choice' ? setSelected(index) : setSelectedMany((values) => values.includes(index) ? values.filter((value) => value !== index) : [...values, index])} /><span>{option}</span></label> })}</div>}
+    {quiz.question.questionType === 'number' && <label className="field"><span>Твой ответ</span><input type="number" step="any" required disabled={Boolean(result)} value={written} onChange={(event) => setWritten(event.target.value)} /></label>}
+    {quiz.question.questionType === 'short_text' && <label className="field"><span>Твой ответ</span><input required maxLength={500} disabled={Boolean(result)} value={written} onChange={(event) => setWritten(event.target.value)} /></label>}
+    {!result && <button disabled={!canSubmit || attempt.isPending}>Проверить ответ</button>}{result && <div className={result.correct ? 'quiz-result quiz-correct' : 'quiz-result quiz-wrong'}><strong>{result.correct ? 'Верно! Отличная работа.' : 'Пока неверно — попробуй разобраться ещё раз.'}</strong>{result.explanation && <p>{result.explanation}</p>}<button type="button" className="button-ghost" onClick={reset}>Попробовать ещё раз</button></div>}{attempt.error && <p className="form-error">{attempt.error.message}</p>}</form>
 }
 
 function HomeworkCard({ homework, refresh }: { homework: StudentHomework; refresh: () => Promise<unknown> }) {

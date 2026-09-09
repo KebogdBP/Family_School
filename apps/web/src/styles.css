@@ -178,7 +178,9 @@ h2 { margin-bottom: 4px; }
 .quiz-prompt { font-size: 1.08rem; font-weight: 700; }
 .quiz-options { display: grid; gap: 9px; }
 .quiz-option { min-height: 48px; display: flex; align-items: center; gap: 11px; padding: 11px 13px; border: 1px solid #d0d5dd; border-radius: 10px; cursor: pointer; }
-.quiz-option input { width: 18px; min-height: 18px; }
+.quiz-option input[type="radio"], .quiz-option input[type="checkbox"] { width: 18px; min-height: 18px; flex: 0 0 auto; }
+.quiz-option input:not([type="radio"]):not([type="checkbox"]) { flex: 1; }
+.choice-builder { display: grid; gap: 9px; }
 .selected-option { border-color: #2563eb; background: #eff6ff; }
 .quiz-result { display: grid; gap: 10px; padding: 14px; border-radius: 12px; }
 .quiz-correct { color: #05603a; background: #ecfdf3; }

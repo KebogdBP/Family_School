@@ -10,7 +10,8 @@ export type StudentLessonSummary = {
 }
 export type ReflectionFeeling = 'easy' | 'good' | 'hard' | 'need_help'
 export type Reflection = { feeling: ReflectionFeeling; comment: string | null }
-export type StudentQuiz = { id: string; title: string; question: { id: string; prompt: string; options: string[] } }
+export type QuestionType = 'single_choice' | 'multiple_choice' | 'number' | 'short_text'
+export type StudentQuiz = { id: string; title: string; question: { id: string; prompt: string; questionType: QuestionType; options: string[] } }
 export type SubmissionFile = { id: string; originalName: string; mimeType: string; sizeBytes: number; url: string }
 export type StudentHomework = { id: string; title: string; instructions: string; submission: null | { id: string; responseText: string; status: 'draft' | 'submitted' | 'needs_revision' | 'reviewed'; reviewComment: string | null; reviewGrade: number | null; files: SubmissionFile[] } }
 export type StudentLesson = StudentLessonSummary & { blocks: LessonBlock[]; quizzes: StudentQuiz[]; homeworks: StudentHomework[]; reflection: Reflection | null }
@@ -25,7 +26,8 @@ export const saveLessonProgress = (lessonId: string, lastBlockPosition: number, 
   })
 export const saveReflection = (lessonId: string, feeling: ReflectionFeeling, comment: string) =>
   api<{ reflection: Reflection }>(`/student/lessons/${lessonId}/reflection`, { method: 'POST', body: JSON.stringify({ feeling, comment }) })
-export const submitQuizAttempt = (quizId: string, selectedOption: number) => api<{ attempt: { id: string; correct: boolean; score: number; explanation: string | null } }>(`/student/quizzes/${quizId}/attempts`, { method: 'POST', body: JSON.stringify({ selectedOption }) })
+export type QuizAnswer = { selectedOption?: number; selectedOptions?: number[]; numberAnswer?: number; textAnswer?: string }
+export const submitQuizAttempt = (quizId: string, answer: QuizAnswer) => api<{ attempt: { id: string; correct: boolean; score: number; explanation: string | null } }>(`/student/quizzes/${quizId}/attempts`, { method: 'POST', body: JSON.stringify(answer) })
 export const saveHomeworkSubmission = (homeworkId: string, responseText: string, submit: boolean) => api<{ submission: StudentHomework['submission'] }>(`/student/homeworks/${homeworkId}/submission`, { method: 'PUT', body: JSON.stringify({ responseText, submit }) })
 export const uploadHomeworkFile = (homeworkId: string, file: File) => { const body=new FormData();body.set('file',file);return api<{file:SubmissionFile}>(`/student/homeworks/${homeworkId}/files`,{method:'POST',body}) }
 export const deleteHomeworkFile = (fileId: string) => api<{status:string}>(`/submission-files/${fileId}`,{method:'DELETE'})

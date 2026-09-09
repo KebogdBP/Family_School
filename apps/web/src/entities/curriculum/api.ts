@@ -10,7 +10,9 @@ export type Subject = { id: string; title: string; description: string | null; c
 export type BlockType = 'markdown' | 'example' | 'link' | 'video' | 'image'
 export type LessonBlock = { id: string; blockType: BlockType; content: { text?: string; url?: string; caption?: string }; position: number }
 export type LessonContent = { id: string; title: string; summary: string | null; estimatedMinutes: number | null; status: 'draft' | 'published'; blocks: LessonBlock[] }
-export type ParentQuiz = { id: string; title: string; question: { id: string; prompt: string; options: string[]; correctOption: number; explanation: string | null } }
+export type QuestionType = 'single_choice' | 'multiple_choice' | 'number' | 'short_text'
+export type ParentQuiz = { id: string; title: string; question: { id: string; prompt: string; questionType: QuestionType; options: string[]; correctAnswer: { options?: number[]; value?: number; tolerance?: number; accepted?: string[] }; explanation: string | null } }
+export type CreateQuizInput = { title: string; prompt: string; questionType: QuestionType; options?: string[]; correctOptions?: number[]; correctNumber?: number; tolerance?: number; acceptedAnswers?: string[]; explanation: string; position: number }
 export type Homework = { id: string; title: string; instructions: string; position: number }
 
 export const getSubjects = () => api<{ subjects: Subject[] }>('/subjects')
@@ -53,7 +55,7 @@ export const updateLessonBlock = (blockId: string, input: { blockType: BlockType
 export const deleteLessonBlock = (blockId: string) =>
   api<{ status: string }>(`/content-blocks/${blockId}`, { method: 'DELETE' })
 export const getLessonQuizzes = (lessonId: string) => api<{ quizzes: ParentQuiz[] }>(`/lessons/${lessonId}/quizzes`)
-export const createQuiz = (lessonId: string, input: { title: string; prompt: string; options: string[]; correctOption: number; explanation: string; position: number }) => api<{ quiz: { id: string } }>(`/lessons/${lessonId}/quizzes`, { method: 'POST', body: JSON.stringify(input) })
+export const createQuiz = (lessonId: string, input: CreateQuizInput) => api<{ quiz: { id: string } }>(`/lessons/${lessonId}/quizzes`, { method: 'POST', body: JSON.stringify(input) })
 export const deleteQuiz = (quizId: string) => api<{ status: string }>(`/quizzes/${quizId}`, { method: 'DELETE' })
 export const getLessonHomeworks = (lessonId: string) => api<{ homeworks: Homework[] }>(`/lessons/${lessonId}/homeworks`)
 export const createHomework = (lessonId: string, input: { title: string; instructions: string; position: number }) => api<{ homework: { id: string } }>(`/lessons/${lessonId}/homeworks`, { method: 'POST', body: JSON.stringify(input) })
