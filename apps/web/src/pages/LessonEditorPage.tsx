@@ -5,7 +5,7 @@ import {
   createLessonBlock, deleteLessonBlock, getLessonContent, updateLessonBlock,
   type BlockType, type LessonBlock,
 } from '@/entities/curriculum/api'
-import { QuizEditor } from '@/pages/QuizEditor'
+import { QuizEditor } from '@/pages/LessonActivitiesEditor'
 
 const blockLabels: Record<BlockType, string> = {
   markdown: 'Текст', example: 'Пример', link: 'Ссылка', video: 'Видео', image: 'Изображение',

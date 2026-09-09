@@ -11,7 +11,8 @@ export type StudentLessonSummary = {
 export type ReflectionFeeling = 'easy' | 'good' | 'hard' | 'need_help'
 export type Reflection = { feeling: ReflectionFeeling; comment: string | null }
 export type StudentQuiz = { id: string; title: string; question: { id: string; prompt: string; options: string[] } }
-export type StudentLesson = StudentLessonSummary & { blocks: LessonBlock[]; quizzes: StudentQuiz[]; reflection: Reflection | null }
+export type StudentHomework = { id: string; title: string; instructions: string; submission: null | { id: string; responseText: string; status: 'draft' | 'submitted' | 'needs_revision' | 'reviewed'; reviewComment: string | null; reviewGrade: number | null } }
+export type StudentLesson = StudentLessonSummary & { blocks: LessonBlock[]; quizzes: StudentQuiz[]; homeworks: StudentHomework[]; reflection: Reflection | null }
 export type TodayLesson = StudentLessonSummary & { planItemId: string; isRequired: boolean }
 
 export const getStudentLessons = () => api<{ lessons: StudentLessonSummary[] }>('/student/lessons')
@@ -24,3 +25,4 @@ export const saveLessonProgress = (lessonId: string, lastBlockPosition: number, 
 export const saveReflection = (lessonId: string, feeling: ReflectionFeeling, comment: string) =>
   api<{ reflection: Reflection }>(`/student/lessons/${lessonId}/reflection`, { method: 'POST', body: JSON.stringify({ feeling, comment }) })
 export const submitQuizAttempt = (quizId: string, selectedOption: number) => api<{ attempt: { id: string; correct: boolean; score: number; explanation: string | null } }>(`/student/quizzes/${quizId}/attempts`, { method: 'POST', body: JSON.stringify({ selectedOption }) })
+export const saveHomeworkSubmission = (homeworkId: string, responseText: string, submit: boolean) => api<{ submission: StudentHomework['submission'] }>(`/student/homeworks/${homeworkId}/submission`, { method: 'PUT', body: JSON.stringify({ responseText, submit }) })

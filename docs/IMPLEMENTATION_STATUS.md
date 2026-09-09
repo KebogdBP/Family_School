@@ -66,7 +66,10 @@
 - [x] migration 006 for quiz questions, attempts and answers
 - [x] parent single-question quiz constructor
 - [x] student quiz flow with server-side scoring and answer privacy
+- [x] migration 007 for text homework submissions and immutable reviews
+- [x] student draft and submit flow
+- [x] parent review queue with grade, comment and revision decision
 
 ## Следующая задача
 
-Добавить открытые домашние задания с текстовым ответом и проверкой родителем.
+Добавить безопасную загрузку фотографий тетради вне публичной директории.

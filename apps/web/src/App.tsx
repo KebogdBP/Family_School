@@ -11,6 +11,7 @@ import { StudentLessonPage } from '@/pages/StudentLessonPage'
 import { getTodayLessons, type StudentLessonSummary } from '@/entities/learning/api'
 import { WeeklyPlanPage } from '@/pages/WeeklyPlanPage'
 import { ProgressReportPage } from '@/pages/ProgressReportPage'
+import { ReviewQueuePage } from '@/pages/ReviewQueuePage'
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
@@ -89,7 +90,7 @@ function AppShell({ principal, children }: { principal: Principal; children: Rea
   const client = useQueryClient()
   const setPrincipal = useAuthStore((state) => state.setPrincipal)
   const exit = useMutation({ mutationFn: logout, onSettled: () => { setPrincipal(null); client.clear(); void navigate('/login', { replace: true }) } })
-  return <div className="app-shell"><aside className="sidebar"><div className="brand">Home<span>Edu</span></div><nav>{principal.role === 'parent' ? <><NavLink to="/children">Дети</NavLink></> : <NavLink to="/today">Сегодня</NavLink>}</nav><div className="account"><strong>{principal.displayName}</strong><small>{principal.role === 'parent' ? 'Родитель' : `${principal.grade} класс`}</small><button className="button-secondary" onClick={() => exit.mutate()}>Выйти</button></div></aside><main>{children}</main></div>
+  return <div className="app-shell"><aside className="sidebar"><div className="brand">Home<span>Edu</span></div><nav>{principal.role === 'parent' ? <><NavLink to="/children">Дети</NavLink><NavLink to="/reviews">Проверка работ</NavLink></> : <NavLink to="/today">Сегодня</NavLink>}</nav><div className="account"><strong>{principal.displayName}</strong><small>{principal.role === 'parent' ? 'Родитель' : `${principal.grade} класс`}</small><button className="button-secondary" onClick={() => exit.mutate()}>Выйти</button></div></aside><main>{children}</main></div>
 }
 
 function CreateStudentForm({ onDone }: { onDone: () => void }) {
@@ -155,6 +156,7 @@ function RoutedApp() {
     <Route path="/children/:studentId/curriculum" element={principal?.role === 'parent' ? <AppShell principal={principal}><CurriculumPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} />
     <Route path="/children/:studentId/plan" element={principal?.role === 'parent' ? <AppShell principal={principal}><WeeklyPlanPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} />
     <Route path="/children/:studentId/report" element={principal?.role === 'parent' ? <AppShell principal={principal}><ProgressReportPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} />
+    <Route path="/reviews" element={principal?.role === 'parent' ? <AppShell principal={principal}><ReviewQueuePage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} />
     <Route path="/lessons/:lessonId/edit" element={principal?.role === 'parent' ? <AppShell principal={principal}><LessonEditorPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} />
     <Route path="/today" element={principal?.role === 'student' ? <AppShell principal={principal}><TodayPage principal={principal} /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} />
     <Route path="/study/lessons/:lessonId" element={principal?.role === 'student' ? <AppShell principal={principal}><StudentLessonPage /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} />

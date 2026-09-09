@@ -82,6 +82,9 @@ const quiz = await request(`/lessons/${lesson.lesson.id}/quizzes`, {
 })
 const parentQuizzes = await request(`/lessons/${lesson.lesson.id}/quizzes`)
 assert(parentQuizzes.quizzes.length === 1, 'Parent quiz was not created')
+const homework = await request(`/lessons/${lesson.lesson.id}/homeworks`, {
+  method: 'POST', body: JSON.stringify({ title: 'Объясни дробь', instructions: 'Объясни своими словами, почему 2/4 равно 1/2.', position: 1 }),
+})
 const tree = await request(`/curricula/${curriculum.curriculum.id}`)
 assert(tree.curriculum.subjects[0].sections[0].topics[0].lessons.length === 1, 'Curriculum tree is incomplete')
 
@@ -115,10 +118,14 @@ assert(studentLessons.lessons[0].progress.status === 'not_started', 'New lesson 
 const studentLesson = await request(`/student/lessons/${lesson.lesson.id}`)
 assert(studentLesson.lesson.blocks.length === 2, 'Student lesson must contain ordered blocks')
 assert(studentLesson.lesson.quizzes.length === 1 && studentLesson.lesson.quizzes[0].question.correctOption === undefined, 'Quiz answer leaked to student')
+assert(studentLesson.lesson.homeworks.length === 1, 'Homework is missing from student lesson')
 const wrongAttempt = await request(`/student/quizzes/${quiz.quiz.id}/attempts`, { method: 'POST', body: JSON.stringify({ selectedOption: 1 }) })
 assert(wrongAttempt.attempt.score === 0 && !wrongAttempt.attempt.correct, 'Wrong quiz answer was accepted')
 const correctAttempt = await request(`/student/quizzes/${quiz.quiz.id}/attempts`, { method: 'POST', body: JSON.stringify({ selectedOption: 0 }) })
 assert(correctAttempt.attempt.score === 100 && correctAttempt.attempt.correct, 'Correct quiz answer was rejected')
+await request(`/student/homeworks/${homework.homework.id}/submission`, { method: 'PUT', body: JSON.stringify({ responseText: 'Если разделить две части из четырёх, получится половина.', submit: false }) })
+const submitted = await request(`/student/homeworks/${homework.homework.id}/submission`, { method: 'PUT', body: JSON.stringify({ responseText: 'Если разделить две части из четырёх, получится половина.', submit: true }) })
+assert(submitted.submission.status === 'submitted', 'Homework was not submitted')
 await request(`/student/lessons/${lesson.lesson.id}/progress`, {
   method: 'PATCH', body: JSON.stringify({ lastBlockPosition: 1, completed: false }),
 })
@@ -150,5 +157,10 @@ await request('/auth/parent/login', {
 })
 const report = await request(`/students/${sara.student.id}/progress-report`)
 assert(report.summary.completed === 1 && report.summary.needsHelp === 1, 'Parent report is incorrect')
+const queue = await request('/review-submissions')
+assert(queue.submissions.length === 1 && queue.submissions[0].studentName === 'Сара', 'Parent review queue is incorrect')
+await request(`/submissions/${queue.submissions[0].id}/reviews`, { method: 'POST', body: JSON.stringify({ decision: 'accepted', grade: 5, comment: 'Верно и понятно объяснено.' }) })
+const reviewedQueue = await request('/review-submissions')
+assert(reviewedQueue.submissions[0].status === 'reviewed', 'Homework review was not saved')
 
-console.log('Integration OK: plans, progress, reflections, quiz scoring and parent report are isolated and persistent')
+console.log('Integration OK: plans, quizzes, homework submission/review, reflections and reports are persistent')

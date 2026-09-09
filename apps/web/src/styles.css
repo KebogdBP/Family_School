@@ -183,6 +183,30 @@ h2 { margin-bottom: 4px; }
 .quiz-result { display: grid; gap: 10px; padding: 14px; border-radius: 12px; }
 .quiz-correct { color: #05603a; background: #ecfdf3; }
 .quiz-wrong { color: #912018; background: #fff1f0; }
+.homework-list, .review-list { display: grid; gap: 14px; margin-top: 14px; }
+.student-homework { display: grid; gap: 14px; }
+.student-homework h2, .student-homework p { margin: 0; }
+.homework-actions, .review-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.review-feedback, .submitted-answer { padding: 14px; border-radius: 10px; background: #ecfdf3; }
+.review-feedback p, .submitted-answer p { margin: 6px 0 0; white-space: pre-wrap; }
+.revision-feedback { color: #912018; background: #fff1f0; }
+.review-card { display: grid; gap: 12px; border-left: 5px solid #2563eb; }
+.review-card h2, .review-card p { margin: 0; }
+.review-form { display: grid; grid-template-columns: 1fr 150px; gap: 12px; }
+.review-actions, .review-form .form-error { grid-column: 1 / -1; }
+.homework-editor, .quiz-editor { margin-top: 28px; }
+.homework-list, .review-list { display: grid; gap: 14px; margin-top: 14px; }
+.student-homework { display: grid; gap: 14px; }
+.student-homework h2, .student-homework p { margin: 0; }
+.homework-actions, .review-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.review-feedback, .submitted-answer { padding: 14px; border-radius: 11px; background: #f2f4f7; }
+.review-feedback p, .submitted-answer p { margin: 7px 0 0; white-space: pre-wrap; }
+.revision-feedback { color: #912018; background: #fff1f0; }
+.review-card { display: grid; gap: 12px; border-left: 5px solid #2563eb; }
+.review-card h2, .review-card > p { margin: 0; }
+.review-card summary { cursor: pointer; font-weight: 700; }
+.review-form { display: grid; grid-template-columns: 1fr 160px; gap: 12px; padding-top: 8px; border-top: 1px solid #e4e7ec; }
+.review-actions, .review-form .form-error { grid-column: 1 / -1; }
 @media (max-width: 760px) {
   .app-shell { grid-template-columns: 1fr; }
   .sidebar { min-height: auto; position: sticky; top: 0; z-index: 5; padding: 12px 16px; flex-direction: row; align-items: center; gap: 12px; }
@@ -212,4 +236,6 @@ h2 { margin-bottom: 4px; }
   .plan-form { grid-template-columns: 1fr; }
   .plan-form .form-error { grid-column: auto; }
   .feeling-options, .report-summary { grid-template-columns: 1fr 1fr; }
+  .review-form { grid-template-columns: 1fr; }
+  .review-actions, .review-form .form-error { grid-column: auto; flex-direction: column; }
 }

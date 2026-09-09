@@ -8,6 +8,7 @@ use HomeEdu\CurriculumApi;
 use HomeEdu\Database;
 use HomeEdu\Env;
 use HomeEdu\Http;
+use HomeEdu\HomeworkApi;
 use HomeEdu\PlanningApi;
 use HomeEdu\QuizApi;
 use HomeEdu\RateLimiter;
@@ -36,6 +37,7 @@ try {
         $method === 'POST' && $path === '/api/v1/students' => createStudent($db),
         $method === 'PATCH' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/pin$#', $path, $matches) === 1 => updateStudentPin($db, $matches[1]),
         preg_match('#^/api/v1/(lessons/[0-9a-f-]{36}/quizzes|quizzes/[0-9a-f-]{36}|student/quizzes/[0-9a-f-]{36}/attempts)$#', $path) === 1 => QuizApi::dispatch($db, $method, $path),
+        preg_match('#^/api/v1/(lessons/[0-9a-f-]{36}/homeworks|homeworks/[0-9a-f-]{36}|student/homeworks/[0-9a-f-]{36}/submission|review-submissions|submissions/[0-9a-f-]{36}/reviews)$#', $path) === 1 => HomeworkApi::dispatch($db, $method, $path),
         str_starts_with($path, '/api/v1/student/') => StudentLearningApi::dispatch($db, $method, $path),
         preg_match('#^/api/v1/(students/[0-9a-f-]{36}/(weekly-plan|plan-items|progress-report)|plan-items/[0-9a-f-]{36})$#', $path) === 1 => PlanningApi::dispatch($db, $method, $path),
         default => CurriculumApi::dispatch($db, $method, $path),
