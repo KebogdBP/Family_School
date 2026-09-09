@@ -211,9 +211,15 @@ const masteryReport = await request(`/students/${sara.student.id}/progress-repor
 assert(masteryReport.mastery[0].status === 'needs_reinforcement' && masteryReport.summary.topicsToReview === 1, 'Homework evidence did not schedule topic review')
 const expectedReviewDate = new Date(); expectedReviewDate.setDate(expectedReviewDate.getDate() + 7)
 assert(masteryReport.mastery[0].nextReviewAt === expectedReviewDate.toISOString().slice(0, 10), 'Custom review interval was not applied')
+assert(masteryReport.reviewTasks.length === 1 && masteryReport.reviewTasks[0].lessonId === lesson.lesson.id, 'Automatic review task was not created')
 assert(masteryReport.achievements.some((item) => item.code === 'independent_revision'), 'Independent revision achievement was not awarded')
 assert(masteryReport.achievements.some((item) => item.code === 'independent_explanation'), 'Independent explanation achievement was not awarded')
 assert(masteryReport.summary.achievements === 2, 'Achievement count is incorrect')
 assert(masteryReport.masterySubjects[0].title === 'Математика' && masteryReport.masterySubjects[0].score > 0, 'Subject progress was not calculated')
 
-console.log('Integration OK: learning, private files, configurable mastery rules, achievements and family isolation are persistent')
+await request('/auth/logout', { method: 'POST' }); cookie = ''
+await request('/auth/student/login', { method: 'POST', body: JSON.stringify({ studentId: sara.student.id, pin: '1206' }) })
+const studentReviews = await request('/student/reviews')
+assert(studentReviews.reviewTasks.length === 1 && !studentReviews.reviewTasks[0].isDue, 'Sara upcoming review task is missing')
+
+console.log('Integration OK: configurable mastery automatically creates isolated review tasks with lesson links')

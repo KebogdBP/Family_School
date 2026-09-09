@@ -82,7 +82,9 @@
 - [x] parent-confirmed independent explanation achievement
 - [x] migration 012 for per-student assigned-subject mastery rules
 - [x] parent UI for evidence thresholds, successful work types and review interval
+- [x] automatic personal review tasks generated from mastery schedule
+- [x] due review tasks on Today and upcoming reviews on student Progress page
 
 ## Следующая задача
 
-Добавить автоматическое формирование задания на повторение из расписания освоения.
+Добавить отдельную короткую контрольную для повторения вместо повторного открытия всего урока.

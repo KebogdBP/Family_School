@@ -23,6 +23,8 @@ final class StudentLearningApi
                 => Http::json(['subjects'=>Mastery::subjects($db,$familyId,$studentId),'topics'=>Mastery::topics($db,$familyId,$studentId)]),
             $method === 'GET' && $path === '/api/v1/student/achievements'
                 => Http::json(['achievements'=>Achievements::list($db,$familyId,$studentId)]),
+            $method === 'GET' && $path === '/api/v1/student/reviews'
+                => Http::json(['reviewTasks'=>Mastery::reviewTasks($db,$familyId,$studentId)]),
             $method === 'GET' && preg_match('#^/api/v1/student/lessons/([0-9a-f-]{36})$#', $path, $matches) === 1
                 => self::lesson($db, $familyId, $studentId, $matches[1]),
             $method === 'PATCH' && preg_match('#^/api/v1/student/lessons/([0-9a-f-]{36})/progress$#', $path, $matches) === 1
@@ -80,7 +82,7 @@ final class StudentLearningApi
             $lesson['isRequired'] = (bool) $row['is_required'];
             return $lesson;
         }, $statement->fetchAll());
-        Http::json(['date' => date('Y-m-d'), 'lessons' => $lessons]);
+        Http::json(['date' => date('Y-m-d'), 'lessons' => $lessons, 'reviewTasks'=>Mastery::reviewTasks($db,$familyId,$studentId,true)]);
     }
 
     private static function lesson(PDO $db, string $familyId, string $studentId, string $lessonId): never

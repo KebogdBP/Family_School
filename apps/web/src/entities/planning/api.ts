@@ -1,5 +1,5 @@
 import { api } from '@/shared/api/client'
-import type { Achievement, LessonProgressStatus, MasterySubject, MasteryTopic } from '@/entities/learning/api'
+import type { Achievement, LessonProgressStatus, MasterySubject, MasteryTopic, ReviewTask } from '@/entities/learning/api'
 
 export type AvailableLesson = { id: string; title: string; subjectTitle: string; subjectColor: string }
 export type PlanItem = AvailableLesson & { id: string; lessonId: string; scheduledDate: string; isRequired: boolean; position: number; progressStatus: LessonProgressStatus }
@@ -14,6 +14,7 @@ export type ProgressReport = {
   items: Array<{ id: string; lessonId: string; title: string; subjectTitle: string; subjectColor: string; scheduledDate: string; isRequired: boolean; progressStatus: LessonProgressStatus; startedAt: string | null; completedAt: string | null; reflection: { feeling: string; comment: string | null } | null }>
   mastery: MasteryTopic[]
   masterySubjects: MasterySubject[]
+  reviewTasks: ReviewTask[]
   achievements: Achievement[]
 }
 export const getProgressReport = (studentId: string) => api<ProgressReport>(`/students/${studentId}/progress-report`)

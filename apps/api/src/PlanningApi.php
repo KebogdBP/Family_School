@@ -121,7 +121,7 @@ final class PlanningApi
         $summary['masteredTopics']=count(array_filter($mastery,static fn(array $topic):bool=>$topic['status']==='mastered'));
         $summary['topicsToReview']=count(array_filter($mastery,static fn(array $topic):bool=>$topic['status']==='needs_reinforcement'));
         $achievements=Achievements::list($db,$familyId,$studentId);$summary['achievements']=count($achievements);
-        Http::json(['summary'=>$summary,'items'=>$items,'masterySubjects'=>Mastery::subjects($db,$familyId,$studentId),'mastery'=>$mastery,'achievements'=>$achievements]);
+        Http::json(['summary'=>$summary,'items'=>$items,'reviewTasks'=>Mastery::reviewTasks($db,$familyId,$studentId),'masterySubjects'=>Mastery::subjects($db,$familyId,$studentId),'mastery'=>$mastery,'achievements'=>$achievements]);
     }
 
     private static function removeItem(PDO $db, string $familyId, string $actorId, string $id): never
