@@ -80,7 +80,9 @@
 - [x] private student achievements page and achievement summary for parent
 - [x] aggregated subject progress for parent and student dashboards
 - [x] parent-confirmed independent explanation achievement
+- [x] migration 012 for per-student assigned-subject mastery rules
+- [x] parent UI for evidence thresholds, successful work types and review interval
 
 ## Следующая задача
 
-Добавить управляемые настройки порогов освоения для каждого предмета.
+Добавить автоматическое формирование задания на повторение из расписания освоения.

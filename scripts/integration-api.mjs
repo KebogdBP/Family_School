@@ -58,6 +58,9 @@ const curriculum = await request('/curricula', {
 const assignment = await request(`/curricula/${curriculum.curriculum.id}/subjects`, {
   method: 'POST', body: JSON.stringify({ subjectId: mathematics.subject.id, position: 0 }),
 })
+await request(`/curriculum-subjects/${assignment.curriculumSubject.id}/mastery-settings`, {
+  method: 'PATCH', body: JSON.stringify({ minEvidenceCount: 6, minSuccessfulTypes: 2, reviewIntervalDays: 7 }),
+})
 const section = await request(`/curriculum-subjects/${assignment.curriculumSubject.id}/sections`, {
   method: 'POST', body: JSON.stringify({ title: 'Обыкновенные дроби', position: 0 }),
 })
@@ -96,6 +99,7 @@ const homework = await request(`/lessons/${lesson.lesson.id}/homeworks`, {
 })
 const tree = await request(`/curricula/${curriculum.curriculum.id}`)
 assert(tree.curriculum.subjects[0].sections[0].topics[0].lessons.length === 1, 'Curriculum tree is incomplete')
+assert(tree.curriculum.subjects[0].masterySettings.reviewIntervalDays === 7, 'Subject mastery settings were not saved')
 
 await request('/auth/logout', { method: 'POST' })
 cookie = ''
@@ -205,9 +209,11 @@ const reviewedQueue = await request('/review-submissions')
 assert(reviewedQueue.submissions[0].status === 'reviewed', 'Revised homework review was not saved')
 const masteryReport = await request(`/students/${sara.student.id}/progress-report`)
 assert(masteryReport.mastery[0].status === 'needs_reinforcement' && masteryReport.summary.topicsToReview === 1, 'Homework evidence did not schedule topic review')
+const expectedReviewDate = new Date(); expectedReviewDate.setDate(expectedReviewDate.getDate() + 7)
+assert(masteryReport.mastery[0].nextReviewAt === expectedReviewDate.toISOString().slice(0, 10), 'Custom review interval was not applied')
 assert(masteryReport.achievements.some((item) => item.code === 'independent_revision'), 'Independent revision achievement was not awarded')
 assert(masteryReport.achievements.some((item) => item.code === 'independent_explanation'), 'Independent explanation achievement was not awarded')
 assert(masteryReport.summary.achievements === 2, 'Achievement count is incorrect')
 assert(masteryReport.masterySubjects[0].title === 'Математика' && masteryReport.masterySubjects[0].score > 0, 'Subject progress was not calculated')
 
-console.log('Integration OK: learning, private files, mastery, revision achievements and family isolation are persistent')
+console.log('Integration OK: learning, private files, configurable mastery rules, achievements and family isolation are persistent')

@@ -4,7 +4,8 @@ export type CurriculumSummary = { id: string; title: string; schoolYear: string;
 export type Lesson = { id: string; title: string; summary: string | null; position: number; status: 'draft' | 'published' }
 export type Topic = { id: string; title: string; position: number; lessons: Lesson[] }
 export type Section = { id: string; title: string; position: number; topics: Topic[] }
-export type AssignedSubject = { id: string; assignmentId: string; title: string; color: string; position: number; sections: Section[] }
+export type MasterySettings = { minEvidenceCount: number; minSuccessfulTypes: number; reviewIntervalDays: number }
+export type AssignedSubject = { id: string; assignmentId: string; title: string; color: string; position: number; masterySettings: MasterySettings; sections: Section[] }
 export type CurriculumTree = { id: string; studentId: string; title: string; schoolYear: string; subjects: AssignedSubject[] }
 export type Subject = { id: string; title: string; description: string | null; color: string; isCustom: boolean }
 export type BlockType = 'markdown' | 'example' | 'link' | 'video' | 'image'
@@ -25,6 +26,7 @@ export const createCurriculum = (input: { studentId: string; title: string; scho
 export const getCurriculum = (id: string) => api<{ curriculum: CurriculumTree }>(`/curricula/${id}`)
 export const attachSubject = (curriculumId: string, subjectId: string, position: number) =>
   api<{ curriculumSubject: { id: string } }>(`/curricula/${curriculumId}/subjects`, { method: 'POST', body: JSON.stringify({ subjectId, position }) })
+export const updateMasterySettings = (assignmentId: string, settings: MasterySettings) => api<{ settings: MasterySettings }>(`/curriculum-subjects/${assignmentId}/mastery-settings`, { method: 'PATCH', body: JSON.stringify(settings) })
 export const createSection = (assignmentId: string, title: string, position: number) =>
   api(`/curriculum-subjects/${assignmentId}/sections`, { method: 'POST', body: JSON.stringify({ title, position }) })
 export const createTopic = (sectionId: string, title: string, position: number) =>

@@ -30,6 +30,8 @@ final class CurriculumApi
                 => self::attachSubject($db, $familyId, $actorId, $m[1]),
             $method === 'POST' && preg_match('#^/api/v1/curriculum-subjects/([0-9a-f-]{36})/sections$#', $path, $m) === 1
                 => self::createChild($db, $familyId, $actorId, 'sections', 'curriculum_subject_id', $m[1]),
+            $method === 'PATCH' && preg_match('#^/api/v1/curriculum-subjects/([0-9a-f-]{36})/mastery-settings$#', $path, $m) === 1
+                => self::updateMasterySettings($db, $familyId, $actorId, $m[1]),
             $method === 'POST' && preg_match('#^/api/v1/sections/([0-9a-f-]{36})/topics$#', $path, $m) === 1
                 => self::createChild($db, $familyId, $actorId, 'topics', 'section_id', $m[1]),
             $method === 'POST' && preg_match('#^/api/v1/topics/([0-9a-f-]{36})/lessons$#', $path, $m) === 1
@@ -128,6 +130,16 @@ final class CurriculumApi
         Http::json(['curriculumSubject' => ['id' => $id, 'subjectId' => $subjectId, 'position' => $position]], 201);
     }
 
+    private static function updateMasterySettings(PDO $db,string $familyId,string $actorId,string $assignmentId): never
+    {
+        self::assertOwned($db,'curriculum_subjects',$assignmentId,$familyId);$body=Http::body();
+        $evidence=(int)($body['minEvidenceCount']??0);$types=(int)($body['minSuccessfulTypes']??0);$interval=(int)($body['reviewIntervalDays']??0);
+        if($evidence<1||$evidence>10||$types<1||$types>3||$types>$evidence||$interval<1||$interval>60)Http::error('validation_error','Проверьте пороги: подтверждения 1–10, типы 1–3, интервал 1–60 дней',422);
+        $db->prepare('INSERT INTO subject_mastery_settings(id,family_id,curriculum_subject_id,min_evidence_count,min_successful_types,review_interval_days) VALUES(:id,:family_id,:assignment_id,:evidence,:types,:interval) ON DUPLICATE KEY UPDATE min_evidence_count=VALUES(min_evidence_count),min_successful_types=VALUES(min_successful_types),review_interval_days=VALUES(review_interval_days)')->execute(['id'=>Uuid::v4(),'family_id'=>$familyId,'assignment_id'=>$assignmentId,'evidence'=>$evidence,'types'=>$types,'interval'=>$interval]);
+        Audit::record($db,$familyId,'parent',$actorId,'mastery_settings.updated','curriculum_subject',$assignmentId,['minEvidenceCount'=>$evidence,'minSuccessfulTypes'=>$types,'reviewIntervalDays'=>$interval]);
+        Http::json(['settings'=>['minEvidenceCount'=>$evidence,'minSuccessfulTypes'=>$types,'reviewIntervalDays'=>$interval]]);
+    }
+
     private static function createChild(PDO $db, string $familyId, string $actorId, string $table, string $parentColumn, string $parentId): never
     {
         $parents = ['sections' => 'curriculum_subjects', 'topics' => 'sections', 'lessons' => 'topics'];
@@ -185,11 +197,13 @@ final class CurriculumApi
         $statement = $db->prepare(
             'SELECT c.id, c.student_id, c.title, c.school_year, cs.id AS curriculum_subject_id,
                     cs.position AS subject_position, s.id AS subject_id, s.title AS subject_title, s.color,
+                    COALESCE(sms.min_evidence_count,2) AS min_evidence_count,COALESCE(sms.min_successful_types,2) AS min_successful_types,COALESCE(sms.review_interval_days,3) AS review_interval_days,
                     se.id AS section_id, se.title AS section_title, se.position AS section_position,
                     t.id AS topic_id, t.title AS topic_title, t.position AS topic_position,
                     l.id AS lesson_id, l.title AS lesson_title, l.summary, l.position AS lesson_position, l.status
              FROM curricula c
              LEFT JOIN curriculum_subjects cs ON cs.curriculum_id = c.id AND cs.family_id = c.family_id
+             LEFT JOIN subject_mastery_settings sms ON sms.curriculum_subject_id=cs.id
              LEFT JOIN subjects s ON s.id = cs.subject_id AND s.deleted_at IS NULL
              LEFT JOIN sections se ON se.curriculum_subject_id = cs.id AND se.deleted_at IS NULL
              LEFT JOIN topics t ON t.section_id = se.id AND t.deleted_at IS NULL
@@ -205,7 +219,7 @@ final class CurriculumApi
         foreach ($rows as $row) {
             if ($row['curriculum_subject_id'] === null || $row['subject_id'] === null) continue;
             $subjectKey = (string) $row['curriculum_subject_id'];
-            $tree['subjects'][$subjectKey] ??= ['id' => $row['subject_id'], 'assignmentId' => $subjectKey, 'title' => $row['subject_title'], 'color' => $row['color'], 'position' => (int) $row['subject_position'], 'sections' => []];
+            $tree['subjects'][$subjectKey] ??= ['id' => $row['subject_id'], 'assignmentId' => $subjectKey, 'title' => $row['subject_title'], 'color' => $row['color'], 'position' => (int) $row['subject_position'], 'masterySettings'=>['minEvidenceCount'=>(int)$row['min_evidence_count'],'minSuccessfulTypes'=>(int)$row['min_successful_types'],'reviewIntervalDays'=>(int)$row['review_interval_days']], 'sections' => []];
             if ($row['section_id'] === null) continue;
             $sectionKey = (string) $row['section_id'];
             $tree['subjects'][$subjectKey]['sections'][$sectionKey] ??= ['id' => $sectionKey, 'title' => $row['section_title'], 'position' => (int) $row['section_position'], 'topics' => []];

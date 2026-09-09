@@ -73,6 +73,7 @@ PIN принимается только как строка из 4–8 цифр 
 | GET | `/students/{id}/curricula` | программы выбранного ученика |
 | GET | `/curricula/{id}` | полное дерево программы |
 | POST | `/curricula/{id}/subjects` | назначение предмета программе |
+| PATCH | `/curriculum-subjects/{id}/mastery-settings` | настроить пороги освоения и интервал повторения |
 | POST | `/curriculum-subjects/{id}/sections` | создание раздела |
 | POST | `/sections/{id}/topics` | создание темы |
 | POST | `/topics/{id}/lessons` | создание урока |
