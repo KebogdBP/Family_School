@@ -9,7 +9,7 @@
 - [x] GitHub Actions CI
 - [x] Vision, Road Map, README
 
-## Фаза 2 — серверное ядро готово, интеграционная проверка ожидает MySQL/PHP
+## Фаза 2 — завершена и проверена на MySQL/PHP
 
 - [x] MySQL migration 001
 - [x] families, users, students, parent-student links
@@ -32,10 +32,10 @@
 - [x] switching to a student profile by PIN
 - [x] adaptive parent and student shells
 - [x] repeatable HTTP integration test for setup, sessions and student PIN login
-- [ ] execute migration against a real MySQL 8 database
-- [ ] run API integration tests with PHP 8.2 and MySQL
+- [x] execute all migrations against MySQL 8.4 in Docker
+- [x] run the complete HTTP integration scenario with PHP 8.3 and MySQL 8.4
 
-## Фаза 3 — начата
+## Фазы 3–6 и базовые отчёты — техническое ядро готово
 
 - [x] migration 002 for curricula, subjects, sections, topics and lessons
 - [x] block content and activities data model
@@ -95,6 +95,22 @@
 - [x] weekly digest with plan completion, mastered topics, completed reviews, difficulties and deterministic next-plan suggestions
 - [x] parent-only versioned JSON export without credentials, sessions, storage names or file contents
 
+## Сверка с Project Vision — 10 сентября 2026
+
+Реализация сохраняет утверждённый стек и продуктовые принципы, но часть поздних функций была сделана до обязательного пилотного контента. До продолжения фазы качества нужно закрыть следующие продуктовые пробелы:
+
+- [ ] готовый маршрут «Дроби» для Давида, 4 класс;
+- [ ] готовый маршрут «Обыкновенные дроби» для Сары, 6 класс;
+- [ ] входная мини-диагностика и выбор первого шага;
+- [ ] проверка полного учебного цикла для обоих профилей;
+- [ ] минимальный AI Gateway: безопасная подсказка и черновик теста;
+- [ ] учёт AI-подсказок в ежедневном отчёте;
+- [ ] редактируемый родительский черновик следующего недельного плана;
+- [ ] browser e2e для двух пилотных профилей перед реальным использованием;
+- [ ] единое автоматическое форматирование кода и production-конфигурация Beget.
+
+Удаление профиля, резервные копии и Beget остаются обязательными, но выполняются после этой последовательности.
+
 ## Следующая задача
 
-Добавить подтверждаемое полное удаление профиля ребёнка и связанных файлов.
+Создать повторяемый seed-маршрут «Дробь как часть целого и простые действия» для Давида, 4 класс.
