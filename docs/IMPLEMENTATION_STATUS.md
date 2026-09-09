@@ -78,7 +78,9 @@
 - [x] evidence-based topic map for parent and personal review reminders for student
 - [x] migration 011 and evidence-backed achievements for revision and durable mastery
 - [x] private student achievements page and achievement summary for parent
+- [x] aggregated subject progress for parent and student dashboards
+- [x] parent-confirmed independent explanation achievement
 
 ## Следующая задача
 
-Добавить достижение за самостоятельное объяснение решения и прогресс по предметам.
+Добавить управляемые настройки порогов освоения для каждого предмета.

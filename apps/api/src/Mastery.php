@@ -29,4 +29,12 @@ final class Mastery
         $s->execute(['student_evidence'=>$studentId,'family_id'=>$familyId,'student_id'=>$studentId]);
         return array_map(static fn(array $r):array=>['id'=>$r['id'],'title'=>$r['title'],'sectionTitle'=>$r['section_title'],'subjectTitle'=>$r['subject_title'],'subjectColor'=>$r['subject_color'],'status'=>$r['status'],'score'=>(int)$r['score'],'evidenceCount'=>(int)$r['evidence_count'],'successfulCount'=>(int)$r['successful_count'],'nextReviewAt'=>$r['next_review_at'],'evidence'=>$r['evidence']?explode('||',$r['evidence']):[]],$s->fetchAll());
     }
+
+    /** @return array<int,array<string,mixed>> */
+    public static function subjects(PDO $db,string $familyId,string $studentId): array
+    {
+        $s=$db->prepare('SELECT s.id,s.title,s.color,COUNT(DISTINCT t.id) AS topic_count,COUNT(DISTINCT IF(ms.status=\'mastered\',t.id,NULL)) AS mastered_count,COUNT(DISTINCT IF(ms.status=\'needs_reinforcement\',t.id,NULL)) AS review_count,COALESCE(ROUND(AVG(COALESCE(ms.score,0))),0) AS score FROM curricula c JOIN curriculum_subjects cs ON cs.curriculum_id=c.id JOIN subjects s ON s.id=cs.subject_id JOIN sections se ON se.curriculum_subject_id=cs.id AND se.deleted_at IS NULL JOIN topics t ON t.section_id=se.id AND t.deleted_at IS NULL LEFT JOIN mastery_states ms ON ms.student_id=c.student_id AND ms.topic_id=t.id WHERE c.family_id=:family_id AND c.student_id=:student_id AND c.is_active=TRUE AND c.deleted_at IS NULL GROUP BY s.id,s.title,s.color,cs.position ORDER BY cs.position');
+        $s->execute(['family_id'=>$familyId,'student_id'=>$studentId]);
+        return array_map(static fn(array $r):array=>['id'=>$r['id'],'title'=>$r['title'],'color'=>$r['color'],'topicCount'=>(int)$r['topic_count'],'masteredCount'=>(int)$r['mastered_count'],'reviewCount'=>(int)$r['review_count'],'score'=>(int)$r['score']],$s->fetchAll());
+    }
 }

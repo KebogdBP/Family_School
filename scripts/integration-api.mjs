@@ -200,12 +200,14 @@ await request(`/student/homeworks/${homework.homework.id}/submission`, { method:
 await request('/auth/logout', { method: 'POST' }); cookie = ''
 await request('/auth/parent/login', { method: 'POST', body: JSON.stringify({ email: 'parent@homeedu.test', password: 'HomeEdu-test-2026!' }) })
 const revisedQueue = await request('/review-submissions')
-await request(`/submissions/${revisedQueue.submissions[0].id}/reviews`, { method: 'POST', body: JSON.stringify({ decision: 'accepted', grade: 5, comment: 'Теперь есть пример — работа принята.' }) })
+await request(`/submissions/${revisedQueue.submissions[0].id}/reviews`, { method: 'POST', body: JSON.stringify({ decision: 'accepted', grade: 5, comment: 'Теперь есть пример — работа принята.', independentExplanation: true }) })
 const reviewedQueue = await request('/review-submissions')
 assert(reviewedQueue.submissions[0].status === 'reviewed', 'Revised homework review was not saved')
 const masteryReport = await request(`/students/${sara.student.id}/progress-report`)
 assert(masteryReport.mastery[0].status === 'needs_reinforcement' && masteryReport.summary.topicsToReview === 1, 'Homework evidence did not schedule topic review')
 assert(masteryReport.achievements.some((item) => item.code === 'independent_revision'), 'Independent revision achievement was not awarded')
-assert(masteryReport.summary.achievements === 1, 'Achievement count is incorrect')
+assert(masteryReport.achievements.some((item) => item.code === 'independent_explanation'), 'Independent explanation achievement was not awarded')
+assert(masteryReport.summary.achievements === 2, 'Achievement count is incorrect')
+assert(masteryReport.masterySubjects[0].title === 'Математика' && masteryReport.masterySubjects[0].score > 0, 'Subject progress was not calculated')
 
 console.log('Integration OK: learning, private files, mastery, revision achievements and family isolation are persistent')

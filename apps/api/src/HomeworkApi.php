@@ -49,7 +49,7 @@ final class HomeworkApi
 
     private static function review(PDO $db,string $familyId,string $actorId,string $submissionId): never
     {
-        $b=Http::body();$decision=(string)($b['decision']??'');$comment=trim((string)($b['comment']??''));$grade=isset($b['grade'])?(int)$b['grade']:null;
+        $b=Http::body();$decision=(string)($b['decision']??'');$comment=trim((string)($b['comment']??''));$grade=isset($b['grade'])?(int)$b['grade']:null;$independentExplanation=($b['independentExplanation']??false)===true;
         if(!in_array($decision,['accepted','needs_revision'],true)||$comment===''||($grade!==null&&($grade<2||$grade>5)))Http::error('validation_error','Проверьте решение, оценку и комментарий',422);
         $s=$db->prepare('SELECT hs.id,hs.student_id,t.id AS topic_id,(SELECT COUNT(*) FROM submission_reviews sr WHERE sr.submission_id=hs.id AND sr.decision=\'needs_revision\') AS revision_count FROM homework_submissions hs JOIN activities a ON a.id=hs.activity_id JOIN lessons l ON l.id=a.lesson_id JOIN topics t ON t.id=l.topic_id WHERE hs.id=:id AND hs.family_id=:family_id AND hs.status IN(\'submitted\',\'needs_revision\')');$s->execute(['id'=>$submissionId,'family_id'=>$familyId]);$submission=$s->fetch();if(!$submission)Http::error('not_found','Работа для проверки не найдена',404);
         $reviewId=Uuid::v4();$db->beginTransaction();
@@ -58,6 +58,7 @@ final class HomeworkApi
             $db->prepare('UPDATE homework_submissions SET status=:status WHERE id=:id')->execute(['status'=>$decision==='accepted'?'reviewed':'needs_revision','id'=>$submissionId]);
             Mastery::record($db,$familyId,(string)$submission['student_id'],(string)$submission['topic_id'],'homework',$reviewId,$decision==='accepted',$grade===null?null:$grade*20,$decision==='accepted'?'Домашняя работа принята родителем.':'Домашняя работа возвращена на доработку.');
             if($decision==='accepted'&&(int)$submission['revision_count']>0)Achievements::award($db,$familyId,(string)$submission['student_id'],'independent_revision','Самостоятельная доработка','Ты учёл комментарий, исправил работу и успешно отправил её снова.',$submissionId);
+            if($decision==='accepted'&&$independentExplanation)Achievements::award($db,$familyId,(string)$submission['student_id'],'independent_explanation','Объяснил самостоятельно','Ты не просто дал ответ, а самостоятельно объяснил ход решения.',$submissionId);
             Audit::record($db,$familyId,'parent',$actorId,'homework.reviewed','submission',$submissionId,['decision'=>$decision,'grade'=>$grade]);$db->commit();
         }catch(\Throwable $e){$db->rollBack();throw $e;}
         Http::json(['review'=>['id'=>$reviewId,'decision'=>$decision,'grade'=>$grade,'comment'=>$comment]]);

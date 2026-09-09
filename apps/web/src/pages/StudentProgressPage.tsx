@@ -1,0 +1,9 @@
+import { useQuery } from '@tanstack/react-query'
+import { getStudentMastery } from '@/entities/learning/api'
+
+const labels = { available: 'Впереди', learning: 'Изучаю', needs_reinforcement: 'Закрепить', mastered: 'Освоено' }
+
+export function StudentProgressPage() {
+  const query = useQuery({ queryKey: ['student-mastery'], queryFn: getStudentMastery })
+  return <><header className="page-header"><p className="eyebrow">Личный рост</p><h1>Мой прогресс</h1><p className="muted">Твои предметы и темы — без сравнения с кем-либо.</p></header>{query.error && <p className="form-error">{query.error.message}</p>}{query.isLoading ? <p>Собираем прогресс…</p> : <><section className="subject-progress">{query.data?.subjects.map((subject) => <article className="card subject-progress-card" key={subject.id} style={{ borderTopColor: subject.color }}><div className="lesson-card-heading"><h2>{subject.title}</h2><strong>{subject.score}%</strong></div><div className="progress-track"><div style={{ width: `${subject.score}%`, background: subject.color }} /></div><p className="muted">Освоено тем: {subject.masteredCount} из {subject.topicCount}{subject.reviewCount ? ` · закрепить: ${subject.reviewCount}` : ''}</p></article>)}</section><section className="mastery-grid">{query.data?.topics.map((topic) => <article className={`card mastery-card mastery-${topic.status}`} key={topic.id} style={{ borderTopColor: topic.subjectColor }}><div className="lesson-card-heading"><span className="badge">{topic.subjectTitle}</span><span className="lesson-status">{labels[topic.status]}</span></div><h3>{topic.title}</h3><div className="progress-track"><div style={{ width: `${topic.score}%`, background: topic.subjectColor }} /></div><small>{topic.evidenceCount ? `${topic.successfulCount} успешных подтверждений из ${topic.evidenceCount}` : 'Результатов пока нет'}</small></article>)}</section></>}</>
+}
