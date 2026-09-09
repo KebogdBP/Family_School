@@ -6,6 +6,7 @@ import { useAuthStore, type Principal } from '@/entities/auth/model'
 import { createStudent, getStudents, type Student } from '@/entities/student/api'
 import { ApiError } from '@/shared/api/client'
 import { CurriculumPage } from '@/pages/CurriculumPage'
+import { LessonEditorPage } from '@/pages/LessonEditorPage'
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
@@ -135,7 +136,7 @@ function RoutedApp() {
   const session = useQuery({ queryKey: ['me'], queryFn: getMe })
   useEffect(() => { if (session.data) setPrincipal(session.data.principal); if (session.error instanceof ApiError && session.error.status === 401) setPrincipal(null) }, [session.data, session.error, setPrincipal])
   if (session.isLoading) return <main className="splash"><div className="brand brand-dark">Home<span>Edu</span></div><p>Проверяем сессию…</p></main>
-  return <Routes><Route path="/login" element={principal ? <Navigate to={principal.role === 'parent' ? '/children' : '/today'} replace /> : <LoginPage />} /><Route path="/setup" element={principal ? <Navigate to="/children" replace /> : <SetupPage />} /><Route path="/children" element={principal?.role === 'parent' ? <AppShell principal={principal}><ChildrenPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} /><Route path="/children/:studentId/curriculum" element={principal?.role === 'parent' ? <AppShell principal={principal}><CurriculumPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} /><Route path="/today" element={principal?.role === 'student' ? <AppShell principal={principal}><TodayPage principal={principal} /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} /><Route path="*" element={<Navigate to={principal?.role === 'student' ? '/today' : principal ? '/children' : '/login'} replace />} /></Routes>
+  return <Routes><Route path="/login" element={principal ? <Navigate to={principal.role === 'parent' ? '/children' : '/today'} replace /> : <LoginPage />} /><Route path="/setup" element={principal ? <Navigate to="/children" replace /> : <SetupPage />} /><Route path="/children" element={principal?.role === 'parent' ? <AppShell principal={principal}><ChildrenPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} /><Route path="/children/:studentId/curriculum" element={principal?.role === 'parent' ? <AppShell principal={principal}><CurriculumPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} /><Route path="/lessons/:lessonId/edit" element={principal?.role === 'parent' ? <AppShell principal={principal}><LessonEditorPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} /><Route path="/today" element={principal?.role === 'student' ? <AppShell principal={principal}><TodayPage principal={principal} /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} /><Route path="*" element={<Navigate to={principal?.role === 'student' ? '/today' : principal ? '/children' : '/login'} replace />} /></Routes>
 }
 
 export function App() {

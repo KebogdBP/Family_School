@@ -7,6 +7,9 @@ export type Section = { id: string; title: string; position: number; topics: Top
 export type AssignedSubject = { id: string; assignmentId: string; title: string; color: string; position: number; sections: Section[] }
 export type CurriculumTree = { id: string; studentId: string; title: string; schoolYear: string; subjects: AssignedSubject[] }
 export type Subject = { id: string; title: string; description: string | null; color: string; isCustom: boolean }
+export type BlockType = 'markdown' | 'example' | 'link' | 'video' | 'image'
+export type LessonBlock = { id: string; blockType: BlockType; content: { text?: string; url?: string; caption?: string }; position: number }
+export type LessonContent = { id: string; title: string; summary: string | null; estimatedMinutes: number | null; status: 'draft' | 'published'; blocks: LessonBlock[] }
 
 export const getSubjects = () => api<{ subjects: Subject[] }>('/subjects')
 export const createSubject = (input: { title: string; color?: string }) =>
@@ -35,3 +38,15 @@ export const updateCurriculumNode = (
 
 export const deleteCurriculumNode = (type: CurriculumNodeType, id: string) =>
   api<{ status: string }>(`/${type}/${id}`, { method: 'DELETE' })
+
+export const getLessonContent = (lessonId: string) =>
+  api<{ lesson: LessonContent }>(`/lessons/${lessonId}/content`)
+
+export const createLessonBlock = (lessonId: string, input: { blockType: BlockType; content: LessonBlock['content']; position: number }) =>
+  api<{ block: LessonBlock }>(`/lessons/${lessonId}/blocks`, { method: 'POST', body: JSON.stringify(input) })
+
+export const updateLessonBlock = (blockId: string, input: { blockType: BlockType; content: LessonBlock['content']; position: number }) =>
+  api<{ status: string }>(`/content-blocks/${blockId}`, { method: 'PATCH', body: JSON.stringify(input) })
+
+export const deleteLessonBlock = (blockId: string) =>
+  api<{ status: string }>(`/content-blocks/${blockId}`, { method: 'DELETE' })

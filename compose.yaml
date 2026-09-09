@@ -1,0 +1,42 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: homeedu
+      MYSQL_USER: homeedu
+      MYSQL_PASSWORD: homeedu-dev-password
+      MYSQL_ROOT_PASSWORD: homeedu-root-dev-password
+    ports:
+      - "3306:3306"
+    volumes:
+      - homeedu_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: ./apps/api
+    environment:
+      APP_ENV: development
+      APP_URL: http://127.0.0.1:8080
+      APP_SETUP_TOKEN: development-setup-token
+      SESSION_COOKIE: homeedu_session
+      SESSION_TTL_HOURS: 168
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: homeedu
+      DB_USER: homeedu
+      DB_PASSWORD: homeedu-dev-password
+      AI_PROVIDER: disabled
+    ports:
+      - "8080:80"
+    volumes:
+      - ./apps/api:/var/www/html
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  homeedu_mysql:

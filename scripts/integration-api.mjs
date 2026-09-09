@@ -64,9 +64,19 @@ const section = await request(`/curriculum-subjects/${assignment.curriculumSubje
 const topic = await request(`/sections/${section.section.id}/topics`, {
   method: 'POST', body: JSON.stringify({ title: 'Общий знаменатель', position: 0 }),
 })
-await request(`/topics/${topic.topic.id}/lessons`, {
+const lesson = await request(`/topics/${topic.topic.id}/lessons`, {
   method: 'POST', body: JSON.stringify({ title: 'Приведение дробей', summary: 'Первый урок', position: 0 }),
 })
+await request(`/lessons/${lesson.lesson.id}/blocks`, {
+  method: 'POST',
+  body: JSON.stringify({ blockType: 'markdown', content: { text: 'Найдём общий знаменатель.' }, position: 0 }),
+})
+await request(`/lessons/${lesson.lesson.id}/blocks`, {
+  method: 'POST',
+  body: JSON.stringify({ blockType: 'video', content: { url: 'https://example.com/fractions', caption: 'Разбор темы' }, position: 1 }),
+})
+const content = await request(`/lessons/${lesson.lesson.id}/content`)
+assert(content.lesson.blocks.length === 2, 'Lesson blocks are incomplete')
 const tree = await request(`/curricula/${curriculum.curriculum.id}`)
 assert(tree.curriculum.subjects[0].sections[0].topics[0].lessons.length === 1, 'Curriculum tree is incomplete')
 
@@ -87,4 +97,4 @@ await request('/auth/student/login', {
 const student = await request('/me')
 assert(student.principal.displayName === 'Сара' && student.principal.grade === 6, 'Sara login failed')
 
-console.log('Integration OK: auth, Sara and David, curriculum tree, parent login, Sara PIN login')
+console.log('Integration OK: auth, Sara and David, curriculum tree, lesson blocks, parent login, Sara PIN login')

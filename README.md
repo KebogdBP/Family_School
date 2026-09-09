@@ -29,6 +29,18 @@ php -S 127.0.0.1:8080 -t apps/api/public
 
 Проверка API: `GET http://127.0.0.1:8080/api/v1/health`.
 
+### Рекомендуемый запуск через Docker
+
+Этот вариант не собирает MySQL и LLVM на macOS. Нужен Docker Desktop или совместимый Docker Runtime. Для Intel Mac на macOS Ventura используйте Docker Desktop 4.48.0: начиная с 4.49.0 требуется macOS 14.
+
+```bash
+docker compose up -d --build
+docker compose exec api php bin/migrate.php
+npm run test:api:integration
+```
+
+MySQL 8.4 работает в контейнере с отдельным volume, API доступен на `http://127.0.0.1:8080`. Пароли в `compose.yaml` предназначены только для локальной разработки и должны быть заменены при деплое.
+
 Frontend обращается к API по пути `/api/v1`. В production web-сервер должен отдавать собранный `apps/web/dist` и проксировать `/api/v1/*` в `apps/api/public/index.php`. Для локальной совместной разработки укажите такой же reverse proxy либо запускайте frontend через конфигурацию сервера.
 
 После миграции откройте `/setup`, создайте первое семейное пространство с ключом `APP_SETUP_TOKEN`, затем добавьте Сару (6 класс) и Давида (4 класс) с отдельными PIN-кодами.

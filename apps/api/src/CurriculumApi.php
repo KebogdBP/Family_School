@@ -34,6 +34,14 @@ final class CurriculumApi
                 => self::createChild($db, $familyId, $actorId, 'topics', 'section_id', $m[1]),
             $method === 'POST' && preg_match('#^/api/v1/topics/([0-9a-f-]{36})/lessons$#', $path, $m) === 1
                 => self::createChild($db, $familyId, $actorId, 'lessons', 'topic_id', $m[1]),
+            $method === 'GET' && preg_match('#^/api/v1/lessons/([0-9a-f-]{36})/content$#', $path, $m) === 1
+                => self::lessonContent($db, $familyId, $m[1]),
+            $method === 'POST' && preg_match('#^/api/v1/lessons/([0-9a-f-]{36})/blocks$#', $path, $m) === 1
+                => self::createContentBlock($db, $familyId, $actorId, $m[1]),
+            $method === 'PATCH' && preg_match('#^/api/v1/content-blocks/([0-9a-f-]{36})$#', $path, $m) === 1
+                => self::updateContentBlock($db, $familyId, $actorId, $m[1]),
+            $method === 'DELETE' && preg_match('#^/api/v1/content-blocks/([0-9a-f-]{36})$#', $path, $m) === 1
+                => self::deleteContentBlock($db, $familyId, $actorId, $m[1]),
             default => Http::error('not_found', 'Маршрут не найден', 404),
         };
     }
@@ -215,6 +223,96 @@ final class CurriculumApi
         Http::json(['curriculum' => $tree]);
     }
 
+    private static function lessonContent(PDO $db, string $familyId, string $lessonId): never
+    {
+        self::assertOwned($db, 'lessons', $lessonId, $familyId);
+        $lessonStatement = $db->prepare(
+            'SELECT id, title, summary, estimated_minutes, status FROM lessons
+             WHERE id = :id AND family_id = :family_id AND deleted_at IS NULL'
+        );
+        $lessonStatement->execute(['id' => $lessonId, 'family_id' => $familyId]);
+        $lesson = $lessonStatement->fetch();
+        $blocksStatement = $db->prepare(
+            'SELECT id, block_type, content_json, position FROM content_blocks
+             WHERE lesson_id = :lesson_id AND family_id = :family_id ORDER BY position, created_at'
+        );
+        $blocksStatement->execute(['lesson_id' => $lessonId, 'family_id' => $familyId]);
+        $blocks = array_map(static fn (array $row): array => [
+            'id' => $row['id'],
+            'blockType' => $row['block_type'],
+            'content' => json_decode((string) $row['content_json'], true, flags: JSON_THROW_ON_ERROR),
+            'position' => (int) $row['position'],
+        ], $blocksStatement->fetchAll());
+        Http::json(['lesson' => [
+            'id' => $lesson['id'], 'title' => $lesson['title'], 'summary' => $lesson['summary'],
+            'estimatedMinutes' => $lesson['estimated_minutes'] === null ? null : (int) $lesson['estimated_minutes'],
+            'status' => $lesson['status'], 'blocks' => $blocks,
+        ]]);
+    }
+
+    private static function createContentBlock(PDO $db, string $familyId, string $actorId, string $lessonId): never
+    {
+        self::assertOwned($db, 'lessons', $lessonId, $familyId);
+        $body = Http::body();
+        [$blockType, $content, $position] = self::blockInput($body);
+        $id = Uuid::v4();
+        $db->prepare(
+            'INSERT INTO content_blocks (id, family_id, lesson_id, block_type, content_json, position)
+             VALUES (:id, :family_id, :lesson_id, :block_type, :content_json, :position)'
+        )->execute([
+            'id' => $id, 'family_id' => $familyId, 'lesson_id' => $lessonId, 'block_type' => $blockType,
+            'content_json' => json_encode($content, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
+            'position' => $position,
+        ]);
+        Audit::record($db, $familyId, 'parent', $actorId, 'content_block.created', 'content_block', $id);
+        Http::json(['block' => ['id' => $id, 'blockType' => $blockType, 'content' => $content, 'position' => $position]], 201);
+    }
+
+    private static function updateContentBlock(PDO $db, string $familyId, string $actorId, string $blockId): never
+    {
+        self::assertOwned($db, 'content_blocks', $blockId, $familyId);
+        [$blockType, $content, $position] = self::blockInput(Http::body());
+        $db->prepare(
+            'UPDATE content_blocks SET block_type = :block_type, content_json = :content_json, position = :position
+             WHERE id = :id AND family_id = :family_id'
+        )->execute([
+            'block_type' => $blockType,
+            'content_json' => json_encode($content, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
+            'position' => $position, 'id' => $blockId, 'family_id' => $familyId,
+        ]);
+        Audit::record($db, $familyId, 'parent', $actorId, 'content_block.updated', 'content_block', $blockId);
+        Http::json(['status' => 'ok']);
+    }
+
+    private static function deleteContentBlock(PDO $db, string $familyId, string $actorId, string $blockId): never
+    {
+        self::assertOwned($db, 'content_blocks', $blockId, $familyId);
+        $db->prepare('DELETE FROM content_blocks WHERE id = :id AND family_id = :family_id')
+            ->execute(['id' => $blockId, 'family_id' => $familyId]);
+        Audit::record($db, $familyId, 'parent', $actorId, 'content_block.deleted', 'content_block', $blockId);
+        Http::json(['status' => 'ok']);
+    }
+
+    /** @param array<string, mixed> $body @return array{string, array<string, string>, int} */
+    private static function blockInput(array $body): array
+    {
+        $blockType = (string) ($body['blockType'] ?? '');
+        $allowed = ['markdown', 'link', 'video', 'image', 'example'];
+        if (!in_array($blockType, $allowed, true)) {
+            Http::error('validation_error', 'Недопустимый тип блока', 422);
+        }
+        $content = $body['content'] ?? null;
+        if (!is_array($content)) Http::error('validation_error', 'Содержимое блока обязательно', 422);
+        $valueKey = $blockType === 'markdown' || $blockType === 'example' ? 'text' : 'url';
+        $value = trim((string) ($content[$valueKey] ?? ''));
+        if ($value === '' || mb_strlen($value) > 20000) Http::error('validation_error', 'Проверьте содержимое блока', 422);
+        if ($valueKey === 'url' && filter_var($value, FILTER_VALIDATE_URL) === false) Http::error('validation_error', 'Укажите корректную ссылку', 422);
+        $normalized = [$valueKey => $value];
+        $caption = trim((string) ($content['caption'] ?? ''));
+        if ($caption !== '') $normalized['caption'] = mb_substr($caption, 0, 300);
+        return [$blockType, $normalized, self::position($body)];
+    }
+
     /** @param array<string, mixed> $items @return array<int, mixed> */
     private static function valuesDeep(array $items): array
     {
@@ -227,9 +325,10 @@ final class CurriculumApi
 
     private static function assertOwned(PDO $db, string $table, string $id, string $familyId): void
     {
-        $allowed = ['students', 'subjects', 'curricula', 'curriculum_subjects', 'sections', 'topics', 'lessons'];
+        $allowed = ['students', 'subjects', 'curricula', 'curriculum_subjects', 'sections', 'topics', 'lessons', 'content_blocks'];
         if (!in_array($table, $allowed, true) || !preg_match('/^[0-9a-f-]{36}$/', $id)) Http::error('not_found', 'Сущность не найдена', 404);
-        $statement = $db->prepare("SELECT id FROM {$table} WHERE id = :id AND family_id = :family_id" . ($table === 'curriculum_subjects' ? '' : ' AND deleted_at IS NULL'));
+        $withoutSoftDelete = ['curriculum_subjects', 'content_blocks'];
+        $statement = $db->prepare("SELECT id FROM {$table} WHERE id = :id AND family_id = :family_id" . (in_array($table, $withoutSoftDelete, true) ? '' : ' AND deleted_at IS NULL'));
         $statement->execute(['id' => $id, 'family_id' => $familyId]);
         if (!$statement->fetchColumn()) Http::error('not_found', 'Сущность не найдена', 404);
     }

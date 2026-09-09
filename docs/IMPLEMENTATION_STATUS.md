@@ -50,7 +50,10 @@
 - [x] responsive ordered curriculum tree
 - [x] editing sections, topics and lessons in the UI
 - [x] two-step soft-delete flow for curriculum nodes
-- [ ] lesson block editor
+- [x] lesson block API with family access checks
+- [x] lesson editor for text, example, link, video and image blocks
+- [x] block editing, deletion and ordering
+- [x] Docker Compose environment with MySQL 8.4 and PHP 8.3
 
 ## Следующая задача
 
