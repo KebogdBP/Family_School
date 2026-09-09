@@ -112,6 +112,9 @@ PIN принимается только как строка из 4–8 цифр 
 | POST | `/student/quizzes/{id}/attempts` | проверить ответ и сохранить попытку |
 | GET, POST | `/lessons/{id}/homeworks` | список и создание открытых заданий |
 | PUT | `/student/homeworks/{id}/submission` | сохранить черновик или отправить ответ |
+| POST | `/student/homeworks/{id}/files` | прикрепить JPG, PNG или PDF к сохранённому черновику |
+| GET | `/submission-files/{id}` | получить приватный файл с проверкой семейного доступа |
+| DELETE | `/submission-files/{id}` | удалить свой файл до отправки работы |
 | GET | `/review-submissions` | родительская очередь работ |
 | POST | `/submissions/{id}/reviews` | принять работу или вернуть на доработку |
 | PATCH | `/content-blocks/{id}` | изменить содержимое, тип или позицию |

@@ -69,7 +69,10 @@
 - [x] migration 007 for text homework submissions and immutable reviews
 - [x] student draft and submit flow
 - [x] parent review queue with grade, comment and revision decision
+- [x] migration 008 for private submission file metadata
+- [x] secure JPG, PNG and PDF homework uploads outside the public directory
+- [x] authenticated file delivery for the owning student and parent family
 
 ## Следующая задача
 
-Добавить безопасную загрузку фотографий тетради вне публичной директории.
+Добавить дополнительные типы тестовых вопросов: несколько вариантов, число и короткий текст.

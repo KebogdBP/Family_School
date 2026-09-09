@@ -4,7 +4,7 @@ let cookie = ''
 
 async function request(path, options = {}) {
   const headers = new Headers(options.headers)
-  if (options.body) headers.set('Content-Type', 'application/json')
+  if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   if (cookie) headers.set('Cookie', cookie)
 
   const response = await fetch(`${baseUrl}${path}`, { ...options, headers })
@@ -124,6 +124,12 @@ assert(wrongAttempt.attempt.score === 0 && !wrongAttempt.attempt.correct, 'Wrong
 const correctAttempt = await request(`/student/quizzes/${quiz.quiz.id}/attempts`, { method: 'POST', body: JSON.stringify({ selectedOption: 0 }) })
 assert(correctAttempt.attempt.score === 100 && correctAttempt.attempt.correct, 'Correct quiz answer was rejected')
 await request(`/student/homeworks/${homework.homework.id}/submission`, { method: 'PUT', body: JSON.stringify({ responseText: 'Если разделить две части из четырёх, получится половина.', submit: false }) })
+const attachment = new FormData()
+attachment.set('file', new File([
+  Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
+], 'тетрадь.png', { type: 'image/png' }))
+const uploaded = await request(`/student/homeworks/${homework.homework.id}/files`, { method: 'POST', body: attachment })
+assert(uploaded.file.originalName === 'тетрадь.png', 'Homework attachment was not uploaded')
 const submitted = await request(`/student/homeworks/${homework.homework.id}/submission`, { method: 'PUT', body: JSON.stringify({ responseText: 'Если разделить две части из четырёх, получится половина.', submit: true }) })
 assert(submitted.submission.status === 'submitted', 'Homework was not submitted')
 await request(`/student/lessons/${lesson.lesson.id}/progress`, {
@@ -149,9 +155,13 @@ const davidLessons = await request('/student/lessons')
 assert(davidLessons.lessons.length === 0, 'David must not see Sara lessons')
 const davidToday = await request('/student/today')
 assert(davidToday.lessons.length === 0, 'David must not see Sara plan')
+const forbiddenFile = await fetch(new URL(uploaded.file.url, baseUrl), { headers: { Cookie: cookie } })
+assert(forbiddenFile.status === 404, 'David must not access Sara attachment')
 
 await request('/auth/logout', { method: 'POST' })
 cookie = ''
+const guestFile = await fetch(new URL(uploaded.file.url, baseUrl))
+assert(guestFile.status === 401, 'Guest must not access a private attachment')
 await request('/auth/parent/login', {
   method: 'POST', body: JSON.stringify({ email: 'parent@homeedu.test', password: 'HomeEdu-test-2026!' }),
 })
@@ -159,8 +169,11 @@ const report = await request(`/students/${sara.student.id}/progress-report`)
 assert(report.summary.completed === 1 && report.summary.needsHelp === 1, 'Parent report is incorrect')
 const queue = await request('/review-submissions')
 assert(queue.submissions.length === 1 && queue.submissions[0].studentName === 'Сара', 'Parent review queue is incorrect')
+assert(queue.submissions[0].files.length === 1, 'Homework attachment is missing from review queue')
+const fileResponse = await fetch(new URL(uploaded.file.url, baseUrl), { headers: { Cookie: cookie } })
+assert(fileResponse.ok && fileResponse.headers.get('content-type') === 'image/png', 'Authorized attachment download failed')
 await request(`/submissions/${queue.submissions[0].id}/reviews`, { method: 'POST', body: JSON.stringify({ decision: 'accepted', grade: 5, comment: 'Верно и понятно объяснено.' }) })
 const reviewedQueue = await request('/review-submissions')
 assert(reviewedQueue.submissions[0].status === 'reviewed', 'Homework review was not saved')
 
-console.log('Integration OK: plans, quizzes, homework submission/review, reflections and reports are persistent')
+console.log('Integration OK: plans, quizzes, homework with private files, reviews, reflections and reports are persistent')

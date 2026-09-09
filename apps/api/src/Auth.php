@@ -11,6 +11,16 @@ final class Auth
     /** @return array<string, mixed> */
     public static function requireRole(PDO $db, string $requiredRole): array
     {
+        $session = self::requireSession($db);
+        if ($session['role'] !== $requiredRole) {
+            Http::error('forbidden', 'Недостаточно прав', 403);
+        }
+        return $session;
+    }
+
+    /** @return array<string, mixed> */
+    public static function requireSession(PDO $db): array
+    {
         $token = $_COOKIE[Env::get('SESSION_COOKIE', 'homeedu_session')] ?? '';
         if (!is_string($token) || strlen($token) < 32) {
             Http::error('unauthorized', 'Требуется вход', 401);
@@ -23,9 +33,7 @@ final class Auth
         $statement->execute(['token_hash' => hash('sha256', $token)]);
         $session = $statement->fetch();
 
-        if (!$session || $session['role'] !== $requiredRole) {
-            Http::error('forbidden', 'Недостаточно прав', 403);
-        }
+        if (!$session) Http::error('unauthorized', 'Требуется вход', 401);
 
         $db->prepare('UPDATE sessions SET last_seen_at = NOW() WHERE id = :id')->execute(['id' => $session['id']]);
         return $session;
@@ -84,4 +92,3 @@ final class Auth
         ]);
     }
 }
-

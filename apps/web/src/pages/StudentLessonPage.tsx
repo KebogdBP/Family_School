@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { NavLink, useParams } from 'react-router-dom'
 import { useState } from 'react'
-import { getStudentLesson, saveHomeworkSubmission, saveLessonProgress, saveReflection, submitQuizAttempt, type ReflectionFeeling, type StudentHomework, type StudentQuiz } from '@/entities/learning/api'
+import { deleteHomeworkFile, getStudentLesson, saveHomeworkSubmission, saveLessonProgress, saveReflection, submitQuizAttempt, uploadHomeworkFile, type ReflectionFeeling, type StudentHomework, type StudentQuiz } from '@/entities/learning/api'
 import type { LessonBlock } from '@/entities/curriculum/api'
 
 function LearningBlock({ block }: { block: LessonBlock }) {
@@ -18,10 +18,28 @@ function StudentQuizCard({ quiz }: { quiz: StudentQuiz }) {
 }
 
 function HomeworkCard({ homework, refresh }: { homework: StudentHomework; refresh: () => Promise<unknown> }) {
-  const [text,setText]=useState(homework.submission?.responseText??'')
-  const save=useMutation({mutationFn:(submit:boolean)=>saveHomeworkSubmission(homework.id,text,submit),onSuccess:refresh})
-  const locked=homework.submission?.status==='submitted'||homework.submission?.status==='reviewed'
-  return <form className="card student-homework" onSubmit={(event)=>{event.preventDefault();save.mutate(true)}}><span className="badge">Домашнее задание</span><h2>{homework.title}</h2><p>{homework.instructions}</p>{homework.submission?.reviewComment&&<div className={homework.submission.status==='needs_revision'?'review-feedback revision-feedback':'review-feedback'}><strong>{homework.submission.status==='needs_revision'?'Нужно доработать':'Проверено'}{homework.submission.reviewGrade?` · оценка ${homework.submission.reviewGrade}`:''}</strong><p>{homework.submission.reviewComment}</p></div>}<textarea rows={6} required maxLength={20000} disabled={locked} placeholder="Напиши ответ своими словами" value={text} onChange={(event)=>setText(event.target.value)}/>{!locked&&<div className="homework-actions"><button type="button" className="button-ghost" disabled={!text.trim()||save.isPending} onClick={()=>save.mutate(false)}>Сохранить черновик</button><button disabled={!text.trim()||save.isPending}>Отправить на проверку</button></div>}{homework.submission?.status==='submitted'&&<p className="saved-note">Работа отправлена и ждёт проверки.</p>}{homework.submission?.status==='reviewed'&&<p className="saved-note">Работа принята.</p>}{save.error&&<p className="form-error">{save.error.message}</p>}</form>
+  const [text, setText] = useState(homework.submission?.responseText ?? '')
+  const save = useMutation({ mutationFn: (submit: boolean) => saveHomeworkSubmission(homework.id, text, submit), onSuccess: refresh })
+  const upload = useMutation({
+    mutationFn: async (file: File) => {
+      if (!homework.submission) await saveHomeworkSubmission(homework.id, text, false)
+      return uploadHomeworkFile(homework.id, file)
+    },
+    onSuccess: refresh,
+  })
+  const removeFile = useMutation({ mutationFn: deleteHomeworkFile, onSuccess: refresh })
+  const locked = homework.submission?.status === 'submitted' || homework.submission?.status === 'reviewed'
+  const error = save.error ?? upload.error ?? removeFile.error
+
+  return <form className="card student-homework" onSubmit={(event) => { event.preventDefault(); save.mutate(true) }}>
+    <span className="badge">Домашнее задание</span><h2>{homework.title}</h2><p>{homework.instructions}</p>
+    {homework.submission?.reviewComment && <div className={homework.submission.status === 'needs_revision' ? 'review-feedback revision-feedback' : 'review-feedback'}><strong>{homework.submission.status === 'needs_revision' ? 'Нужно доработать' : 'Проверено'}{homework.submission.reviewGrade ? ` · оценка ${homework.submission.reviewGrade}` : ''}</strong><p>{homework.submission.reviewComment}</p></div>}
+    <textarea rows={6} required maxLength={20000} disabled={locked} placeholder="Напиши ответ своими словами" value={text} onChange={(event) => setText(event.target.value)} />
+    {homework.submission?.files.length ? <div className="submission-files"><strong>Прикреплённые файлы</strong>{homework.submission.files.map((file) => <div className="submission-file" key={file.id}><a href={file.url} target="_blank" rel="noreferrer">{file.originalName}</a><small>{Math.ceil(file.sizeBytes / 1024)} КБ</small>{!locked && <button type="button" className="icon-button icon-danger" aria-label={`Удалить ${file.originalName}`} disabled={removeFile.isPending} onClick={() => removeFile.mutate(file.id)}>×</button>}</div>)}</div> : null}
+    {!locked && <label className="file-upload"><span>Фото тетради или PDF · до 10 МБ</span><input type="file" accept="image/jpeg,image/png,application/pdf" disabled={!text.trim() || upload.isPending} onChange={(event) => { const file = event.target.files?.[0]; if (file) upload.mutate(file); event.target.value = '' }} /></label>}
+    {!locked && <div className="homework-actions"><button type="button" className="button-ghost" disabled={!text.trim() || save.isPending} onClick={() => save.mutate(false)}>Сохранить черновик</button><button disabled={!text.trim() || save.isPending || upload.isPending}>Отправить на проверку</button></div>}
+    {homework.submission?.status === 'submitted' && <p className="saved-note">Работа отправлена и ждёт проверки.</p>}{homework.submission?.status === 'reviewed' && <p className="saved-note">Работа принята.</p>}{error && <p className="form-error">{error.message}</p>}
+  </form>
 }
 
 export function StudentLessonPage() {
