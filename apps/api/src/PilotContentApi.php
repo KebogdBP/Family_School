@@ -43,7 +43,7 @@ final class PilotContentApi
                 }
             }
             $db->prepare('INSERT INTO subject_mastery_settings(id,family_id,curriculum_subject_id,min_evidence_count,min_successful_types,review_interval_days) VALUES(:id,:family_id,:assignment,2,2,3) ON DUPLICATE KEY UPDATE min_evidence_count=2,min_successful_types=2,review_interval_days=3')->execute(['id'=>Uuid::v4(),'family_id'=>$familyId,'assignment'=>$assignmentId]);
-            $db->prepare('INSERT INTO pilot_content_installs(id,family_id,student_id,route_code,curriculum_id) VALUES(:id,:family_id,:student_id,:route,:curriculum_id)')->execute(['id'=>Uuid::v4(),'family_id'=>$familyId,'student_id'=>$studentId,'route'=>$routeCode,'curriculum_id'=>$curriculumId]);
+            $db->prepare('INSERT INTO pilot_content_installs(id,family_id,student_id,route_code,curriculum_id,section_id) VALUES(:id,:family_id,:student_id,:route,:curriculum_id,:section_id)')->execute(['id'=>Uuid::v4(),'family_id'=>$familyId,'student_id'=>$studentId,'route'=>$routeCode,'curriculum_id'=>$curriculumId,'section_id'=>$sectionId]);
             Audit::record($db,$familyId,'parent',$actorId,'pilot_content.installed','student',$studentId,['routeCode'=>$routeCode,...$counts]);$db->commit();
         }catch(\Throwable $error){$db->rollBack();throw $error;}
         Http::json(['installed'=>true,'alreadyInstalled'=>false,'curriculumId'=>$curriculumId,'routeCode'=>$routeCode,'counts'=>$counts],201);

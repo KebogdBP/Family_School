@@ -23,11 +23,15 @@ export type ReviewQuestion = { id: string; prompt: string; questionType: Questio
 export type MasteryTopic = { id: string; title: string; sectionTitle: string; subjectTitle: string; subjectColor: string; status: 'available' | 'learning' | 'needs_reinforcement' | 'mastered'; score: number; evidenceCount: number; successfulCount: number; nextReviewAt: string | null; evidence: string[] }
 export type MasterySubject = { id: string; title: string; color: string; topicCount: number; masteredCount: number; reviewCount: number; score: number }
 export type Achievement = { id: string; code: 'independent_revision' | 'independent_explanation' | 'durable_mastery'; title: string; description: string; earnedAt: string }
+export type DiagnosticResult = { score: number; recommendedTopicId: string; recommendedTopicTitle: string; recommendedLessonId: string; recommendedLessonTitle: string; completedAt: string }
+export type Diagnostic = { available: boolean; completed: boolean; routeTitle?: string; questions?: Array<{ id: string; prompt: string; options: string[] }>; result?: DiagnosticResult | null }
 
 export const getStudentLessons = () => api<{ lessons: StudentLessonSummary[] }>('/student/lessons')
 export const getTodayLessons = () => api<{ date: string; lessons: TodayLesson[]; continueLesson: ContinueLesson | null; reviewTasks: ReviewTask[] }>('/student/today')
 export const getStudentMastery = () => api<{ subjects: MasterySubject[]; topics: MasteryTopic[] }>('/student/mastery')
 export const getStudentAchievements = () => api<{ achievements: Achievement[] }>('/student/achievements')
+export const getDiagnostic = () => api<Diagnostic>('/student/diagnostic')
+export const submitDiagnostic = (answers: number[]) => api<{ completed: boolean; result: DiagnosticResult }>('/student/diagnostic', { method: 'POST', body: JSON.stringify({ answers }) })
 export const getStudentReviewTasks = () => api<{ reviewTasks: ReviewTask[] }>('/student/reviews')
 export const getReviewSession = (id: string) => api<{ review: { id: string; topicTitle: string; subjectTitle: string; subjectColor: string; dueDate: string; questions: ReviewQuestion[] } }>(`/student/reviews/${id}`)
 export const submitReviewSession = (id: string, answers: Array<QuizAnswer & { questionId: string }>) => api<{ attempt: { id: string; score: number; successful: boolean; results: Array<{ questionId: string; correct: boolean; explanation: string | null }> } }>(`/student/reviews/${id}`, { method: 'POST', body: JSON.stringify({ answers }) })

@@ -288,8 +288,16 @@ for (const forbidden of ['password_hash', 'pin_hash', 'token_hash', 'storage_nam
 await request('/auth/logout', { method: 'POST' }); cookie = ''
 await request('/auth/student/login', { method: 'POST', body: JSON.stringify({ studentId: david.student.id, pin: '1004' }) })
 assert((await request('/student/lessons')).lessons.length === 7, 'David cannot access all lessons from his pilot route')
+const davidDiagnostic = await request('/student/diagnostic')
+assert(davidDiagnostic.available && !davidDiagnostic.completed && davidDiagnostic.questions.length === 4, 'David diagnostic is unavailable')
+const davidDiagnosticResult = await request('/student/diagnostic', { method: 'POST', body: JSON.stringify({ answers: [2, 1, 1, 1] }) })
+assert(davidDiagnosticResult.result.score === 75 && davidDiagnosticResult.result.recommendedTopicTitle === 'Дробь как часть целого', 'David diagnostic recommendation is incorrect')
+assert((await request('/student/diagnostic')).completed, 'David diagnostic result was not saved')
+assert((await request('/student/mastery')).topics.some((item) => item.evidence.some((evidence) => evidence.includes('Входная диагностика'))), 'Diagnostic mastery evidence is missing')
 await request('/auth/logout', { method: 'POST' }); cookie = ''
 await request('/auth/student/login', { method: 'POST', body: JSON.stringify({ studentId: sara.student.id, pin: '1206' }) })
 assert((await request('/student/lessons')).lessons.length === 9, 'Sara cannot access her original lesson and all pilot route lessons')
+const saraDiagnosticResult = await request('/student/diagnostic', { method: 'POST', body: JSON.stringify({ answers: [0, 1, 0, 1] }) })
+assert(saraDiagnosticResult.result.score === 100 && saraDiagnosticResult.result.recommendedTopicTitle === 'Задачи и объяснение', 'Sara diagnostic recommendation is incorrect')
 
-console.log('Integration OK: learning cycle and repeatable David and Sara pilot routes are complete')
+console.log('Integration OK: learning cycle, pilot routes and isolated entry diagnostics are complete')

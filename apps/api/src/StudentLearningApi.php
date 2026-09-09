@@ -15,6 +15,8 @@ final class StudentLearningApi
         $studentId = (string) $session['student_id'];
 
         match (true) {
+            $path === '/api/v1/student/diagnostic'
+                => DiagnosticApi::dispatch($db,$method),
             $method === 'GET' && $path === '/api/v1/student/lessons'
                 => self::listLessons($db, $familyId, $studentId),
             $method === 'GET' && $path === '/api/v1/student/today'

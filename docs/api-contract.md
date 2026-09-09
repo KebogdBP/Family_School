@@ -105,6 +105,8 @@ PIN принимается только как строка из 4–8 цифр 
 | GET | `/lessons/{id}/content` | урок и упорядоченные блоки |
 | POST | `/lessons/{id}/blocks` | добавить блок |
 | GET | `/student/lessons` | уроки текущего ученика с личным прогрессом |
+| GET | `/student/diagnostic` | получить входную диагностику или сохранённый результат и рекомендованный первый урок |
+| POST | `/student/diagnostic` | один раз завершить диагностику текущего ученика и сохранить результат как evidence |
 | GET | `/student/lessons/{id}` | доступный ученику урок и его блоки |
 | PATCH | `/student/lessons/{id}/progress` | сохранить позицию или завершение урока |
 | GET | `/students/{id}/weekly-plan?weekStart=YYYY-MM-DD` | недельный план и доступные уроки |
