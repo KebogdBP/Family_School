@@ -90,7 +90,8 @@
 - [x] migration 014 and parent editor for selecting and ordering 1–3 review questions
 - [x] automatic question selection remains available until the parent saves a custom set
 - [x] personal “continue last lesson” action based on the latest unfinished activity
+- [x] unified weekly plan status derived from lesson progress and homework review state
 
 ## Следующая задача
 
-Объединить статусы урока, теста и домашней работы в понятный статус пункта недельного плана.
+Добавить ежедневную сводку родителю по выполненным, отправленным и требующим внимания заданиям.

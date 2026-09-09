@@ -2,6 +2,7 @@ import { api } from '@/shared/api/client'
 import type { LessonBlock } from '@/entities/curriculum/api'
 
 export type LessonProgressStatus = 'not_started' | 'in_progress' | 'completed'
+export type PlanItemStatus = 'assigned' | 'in_progress' | 'submitted' | 'needs_revision' | 'reviewed'
 type Progress = { status: LessonProgressStatus; lastBlockPosition: number }
 export type StudentLessonSummary = {
   id: string; title: string; summary: string | null; estimatedMinutes: number | null
@@ -15,7 +16,7 @@ export type StudentQuiz = { id: string; title: string; question: { id: string; p
 export type SubmissionFile = { id: string; originalName: string; mimeType: string; sizeBytes: number; url: string }
 export type StudentHomework = { id: string; title: string; instructions: string; submission: null | { id: string; responseText: string; status: 'draft' | 'submitted' | 'needs_revision' | 'reviewed'; reviewComment: string | null; reviewGrade: number | null; files: SubmissionFile[] } }
 export type StudentLesson = StudentLessonSummary & { blocks: LessonBlock[]; quizzes: StudentQuiz[]; homeworks: StudentHomework[]; reflection: Reflection | null }
-export type TodayLesson = StudentLessonSummary & { planItemId: string; isRequired: boolean }
+export type TodayLesson = StudentLessonSummary & { planItemId: string; isRequired: boolean; planStatus: PlanItemStatus }
 export type ContinueLesson = StudentLessonSummary & { lastActivityAt: string }
 export type ReviewTask = { id: string; topicId: string; topicTitle: string; subjectTitle: string; subjectColor: string; lessonId: string | null; dueDate: string; reason: string; isDue: boolean }
 export type ReviewQuestion = { id: string; prompt: string; questionType: QuestionType; options: string[] }

@@ -8,7 +8,7 @@ import { ApiError } from '@/shared/api/client'
 import { CurriculumPage } from '@/pages/CurriculumPage'
 import { LessonEditorPage } from '@/pages/LessonEditorPage'
 import { StudentLessonPage } from '@/pages/StudentLessonPage'
-import { getTodayLessons, type StudentLessonSummary } from '@/entities/learning/api'
+import { getTodayLessons, type TodayLesson } from '@/entities/learning/api'
 import { WeeklyPlanPage } from '@/pages/WeeklyPlanPage'
 import { ProgressReportPage } from '@/pages/ProgressReportPage'
 import { ReviewQueuePage } from '@/pages/ReviewQueuePage'
@@ -146,10 +146,11 @@ function TodayPage({ principal }: { principal: Principal }) {
   </>
 }
 
-function StudentLessonCard({ lesson }: { lesson: StudentLessonSummary }) {
+function StudentLessonCard({ lesson }: { lesson: TodayLesson }) {
   const labels = { not_started: 'Начать', in_progress: 'Продолжить', completed: 'Пройдено' }
+  const statusLabels = { assigned: 'Назначено', in_progress: 'В работе', submitted: 'Отправлено', needs_revision: 'Нужна доработка', reviewed: 'Проверено' }
   const percent = lesson.progress.status === 'completed' ? 100 : lesson.blockCount ? Math.round((lesson.progress.lastBlockPosition / lesson.blockCount) * 100) : 0
-  return <article className="card student-lesson-card" style={{ borderTopColor: lesson.subjectColor }}><div className="lesson-card-heading"><span className="badge" style={{ color: lesson.subjectColor }}>{lesson.subjectTitle}</span><span className={`lesson-status status-${lesson.progress.status}`}>{labels[lesson.progress.status]}</span></div><h2>{lesson.title}</h2><p className="muted">{lesson.sectionTitle} · {lesson.topicTitle}</p>{lesson.summary && <p>{lesson.summary}</p>}<div className="progress-track"><div style={{ width: `${percent}%`, background: lesson.subjectColor }} /></div><div className="lesson-card-footer"><small>{lesson.blockCount} шагов{lesson.estimatedMinutes ? ` · ${lesson.estimatedMinutes} мин` : ''}</small><NavLink className="button-link" to={`/study/lessons/${lesson.id}`}>{labels[lesson.progress.status]} →</NavLink></div></article>
+  return <article className="card student-lesson-card" style={{ borderTopColor: lesson.subjectColor }}><div className="lesson-card-heading"><span className="badge" style={{ color: lesson.subjectColor }}>{lesson.subjectTitle}</span><span className={`lesson-status status-${lesson.planStatus}`}>{statusLabels[lesson.planStatus]}</span></div><h2>{lesson.title}</h2><p className="muted">{lesson.sectionTitle} · {lesson.topicTitle}</p>{lesson.summary && <p>{lesson.summary}</p>}<div className="progress-track"><div style={{ width: `${percent}%`, background: lesson.subjectColor }} /></div><div className="lesson-card-footer"><small>{lesson.blockCount} шагов{lesson.estimatedMinutes ? ` · ${lesson.estimatedMinutes} мин` : ''}</small><NavLink className="button-link" to={`/study/lessons/${lesson.id}`}>{labels[lesson.progress.status]} →</NavLink></div></article>
 }
 
 function RoutedApp() {

@@ -118,6 +118,10 @@ h2 { margin-bottom: 4px; }
 .lesson-status { font-size: .8rem; font-weight: 800; color: #475467; }
 .status-completed { color: #067647; }
 .status-in_progress { color: #b54708; }
+.status-assigned { color: #475467; }
+.status-submitted { color: #175cd3; }
+.status-needs_revision { color: #b42318; background: #fff1f0; }
+.status-reviewed { color: #067647; background: #ecfdf3; }
 .progress-track { height: 9px; overflow: hidden; border-radius: 999px; background: #e4e7ec; }
 .progress-track > div { height: 100%; border-radius: inherit; transition: width .25s ease; }
 .lesson-card-footer small { color: #697586; }

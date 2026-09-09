@@ -117,6 +117,7 @@ await request(`/students/${sara.student.id}/plan-items`, {
 })
 const weeklyPlan = await request(`/students/${sara.student.id}/weekly-plan?weekStart=${scheduledDate}`)
 assert(weeklyPlan.items.length === 1, 'Parent weekly plan item was not saved')
+assert(weeklyPlan.items[0].planStatus === 'assigned', 'New plan item must be assigned')
 
 await request('/auth/logout', { method: 'POST' })
 cookie = ''
@@ -148,6 +149,7 @@ assert(textAttempt.attempt.correct, 'Normalized short-text answer was rejected')
 const learningMastery = await request('/student/mastery')
 assert(learningMastery.topics[0].status === 'learning' && learningMastery.topics[0].evidenceCount === 5, 'Quiz evidence did not update topic mastery')
 await request(`/student/homeworks/${homework.homework.id}/submission`, { method: 'PUT', body: JSON.stringify({ responseText: 'Если разделить две части из четырёх, получится половина.', submit: false }) })
+assert((await request('/student/today')).lessons[0].planStatus === 'in_progress', 'Homework draft must put the plan item in progress')
 const attachment = new FormData()
 attachment.set('file', new File([
   Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
@@ -156,6 +158,7 @@ const uploaded = await request(`/student/homeworks/${homework.homework.id}/files
 assert(uploaded.file.originalName === 'тетрадь.png', 'Homework attachment was not uploaded')
 const submitted = await request(`/student/homeworks/${homework.homework.id}/submission`, { method: 'PUT', body: JSON.stringify({ responseText: 'Если разделить две части из четырёх, получится половина.', submit: true }) })
 assert(submitted.submission.status === 'submitted', 'Homework was not submitted')
+assert((await request('/student/today')).lessons[0].planStatus === 'submitted', 'Submitted homework must update the plan item status')
 await request(`/student/lessons/${lesson.lesson.id}/progress`, {
   method: 'PATCH', body: JSON.stringify({ lastBlockPosition: 1, completed: false }),
 })
@@ -204,6 +207,7 @@ assert(queue.submissions[0].files.length === 1, 'Homework attachment is missing 
 const fileResponse = await fetch(new URL(uploaded.file.url, baseUrl), { headers: { Cookie: cookie } })
 assert(fileResponse.ok && fileResponse.headers.get('content-type') === 'image/png', 'Authorized attachment download failed')
 await request(`/submissions/${queue.submissions[0].id}/reviews`, { method: 'POST', body: JSON.stringify({ decision: 'needs_revision', grade: null, comment: 'Добавь пример с сокращением дроби.' }) })
+assert((await request(`/students/${sara.student.id}/weekly-plan?weekStart=${scheduledDate}`)).items[0].planStatus === 'needs_revision', 'Revision request must update the plan item status')
 await request('/auth/logout', { method: 'POST' }); cookie = ''
 await request('/auth/student/login', { method: 'POST', body: JSON.stringify({ studentId: sara.student.id, pin: '1206' }) })
 await request(`/student/homeworks/${homework.homework.id}/submission`, { method: 'PUT', body: JSON.stringify({ responseText: '2/4 сокращаем на 2 и получаем 1/2 — половину.', submit: true }) })
@@ -213,6 +217,7 @@ const revisedQueue = await request('/review-submissions')
 await request(`/submissions/${revisedQueue.submissions[0].id}/reviews`, { method: 'POST', body: JSON.stringify({ decision: 'accepted', grade: 5, comment: 'Теперь есть пример — работа принята.', independentExplanation: true }) })
 const reviewedQueue = await request('/review-submissions')
 assert(reviewedQueue.submissions[0].status === 'reviewed', 'Revised homework review was not saved')
+assert((await request(`/students/${sara.student.id}/weekly-plan?weekStart=${scheduledDate}`)).items[0].planStatus === 'reviewed', 'Accepted homework must update the plan item status')
 const masteryReport = await request(`/students/${sara.student.id}/progress-report`)
 assert(masteryReport.mastery[0].status === 'needs_reinforcement' && masteryReport.summary.topicsToReview === 1, 'Homework evidence did not schedule topic review')
 const expectedReviewDate = new Date(); expectedReviewDate.setDate(expectedReviewDate.getDate() + 7)

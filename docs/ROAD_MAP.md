@@ -245,7 +245,7 @@ Student → Curriculum → Subject → Section → Topic → Lesson → Activity
 - [x] Экран урока отображает контентные блоки и прогресс.
 - [x] Кнопка «продолжить последнее занятие».
 - [x] Самооценка после занятия: легко / получилось / трудно / нужна помощь.
-- [ ] Статусы задания: `assigned`, `in_progress`, `submitted`, `needs_revision`, `reviewed`.
+- [x] Статусы задания: `assigned`, `in_progress`, `submitted`, `needs_revision`, `reviewed`.
 
 ### 5.3. Критерии готовности
 

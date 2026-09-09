@@ -67,19 +67,32 @@ final class StudentLearningApi
                     s.title AS subject_title, s.color AS subject_color, se.title AS section_title, t.title AS topic_title,
                     COALESCE(lp.status, \'not_started\') AS progress_status, COALESCE(lp.last_block_position,0) AS last_block_position,
                     (SELECT COUNT(*) FROM content_blocks cb WHERE cb.lesson_id=l.id) AS block_count,
-                    pi.id AS plan_item_id, pi.is_required
+                    pi.id AS plan_item_id, pi.is_required,
+                    COALESCE(hw.homework_count,0) AS homework_count,COALESCE(hw.draft_count,0) AS draft_count,
+                    COALESCE(hw.submitted_count,0) AS submitted_count,COALESCE(hw.revision_count,0) AS revision_count,
+                    COALESCE(hw.reviewed_count,0) AS reviewed_count,
+                    COALESCE(qz.quiz_count,0) AS quiz_count,COALESCE(qz.attempted_quiz_count,0) AS attempted_quiz_count
              FROM weekly_plans wp JOIN plan_items pi ON pi.weekly_plan_id=wp.id
              JOIN lessons l ON l.id=pi.lesson_id AND l.deleted_at IS NULL JOIN topics t ON t.id=l.topic_id
              JOIN sections se ON se.id=t.section_id JOIN curriculum_subjects cs ON cs.id=se.curriculum_subject_id
              JOIN subjects s ON s.id=cs.subject_id LEFT JOIN lesson_progress lp ON lp.lesson_id=l.id AND lp.student_id=wp.student_id
+             LEFT JOIN (SELECT a.lesson_id,COUNT(*) AS homework_count,
+                               SUM(hs.status=\'draft\') AS draft_count,SUM(hs.status=\'submitted\') AS submitted_count,
+                               SUM(hs.status=\'needs_revision\') AS revision_count,SUM(hs.status=\'reviewed\') AS reviewed_count
+                        FROM activities a LEFT JOIN homework_submissions hs ON hs.activity_id=a.id AND hs.student_id=:homework_student
+                        WHERE a.activity_type=\'open_work\' AND a.deleted_at IS NULL GROUP BY a.lesson_id) hw ON hw.lesson_id=l.id
+             LEFT JOIN (SELECT a.lesson_id,COUNT(DISTINCT a.id) AS quiz_count,COUNT(DISTINCT qa.activity_id) AS attempted_quiz_count
+                        FROM activities a LEFT JOIN quiz_attempts qa ON qa.activity_id=a.id AND qa.student_id=:quiz_student
+                        WHERE a.activity_type=\'quiz\' AND a.deleted_at IS NULL GROUP BY a.lesson_id) qz ON qz.lesson_id=l.id
              WHERE wp.student_id=:student_id AND wp.family_id=:family_id AND pi.scheduled_date=CURDATE()
              ORDER BY pi.is_required DESC, pi.position, pi.created_at'
         );
-        $statement->execute(['student_id' => $studentId, 'family_id' => $familyId]);
+        $statement->execute(['homework_student'=>$studentId,'quiz_student'=>$studentId,'student_id' => $studentId, 'family_id' => $familyId]);
         $lessons = array_map(static function (array $row): array {
             $lesson = self::lessonSummary($row);
             $lesson['planItemId'] = $row['plan_item_id'];
             $lesson['isRequired'] = (bool) $row['is_required'];
+            $lesson['planStatus'] = self::planStatus($row);
             return $lesson;
         }, $statement->fetchAll());
         Http::json(['date' => date('Y-m-d'), 'lessons' => $lessons, 'continueLesson'=>self::lastInProgressLesson($db,$familyId,$studentId), 'reviewTasks'=>Mastery::reviewTasks($db,$familyId,$studentId,true)]);
@@ -211,5 +224,18 @@ final class StudentLearningApi
             'progress' => ['status' => $row['progress_status'], 'lastBlockPosition' => (int) $row['last_block_position']],
             'blockCount' => (int) $row['block_count'],
         ];
+    }
+
+    /** @param array<string,mixed> $row */
+    private static function planStatus(array $row): string
+    {
+        if((int)$row['revision_count']>0)return 'needs_revision';
+        if((int)$row['submitted_count']>0)return 'submitted';
+        $homeworkCount=(int)$row['homework_count'];$quizCount=(int)$row['quiz_count'];
+        $allHomeworkDone=$homeworkCount===0||(int)$row['reviewed_count']===$homeworkCount;
+        $allQuizzesDone=$quizCount===0||(int)$row['attempted_quiz_count']===$quizCount;
+        if($row['progress_status']==='completed'&&$allHomeworkDone&&$allQuizzesDone)return 'reviewed';
+        if($row['progress_status']!=='not_started'||(int)$row['draft_count']>0||(int)$row['reviewed_count']>0||(int)$row['attempted_quiz_count']>0)return 'in_progress';
+        return 'assigned';
     }
 }

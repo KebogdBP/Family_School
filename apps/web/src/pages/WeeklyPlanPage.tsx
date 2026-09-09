@@ -8,10 +8,11 @@ const today = () => new Date().toISOString().slice(0, 10)
 const monday = (date: string) => { const value = new Date(`${date}T12:00:00`); const day = value.getDay() || 7; value.setDate(value.getDate() - day + 1); return value.toISOString().slice(0, 10) }
 const shiftWeek = (date: string, days: number) => { const value = new Date(`${date}T12:00:00`); value.setDate(value.getDate() + days); return value.toISOString().slice(0, 10) }
 const formatDate = (date: string) => new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(`${date}T12:00:00`))
+const statusLabels = { assigned: 'Назначено', in_progress: 'В работе', submitted: 'Отправлено', needs_revision: 'Нужна доработка', reviewed: 'Проверено' }
 
 function Item({ item, refresh }: { item: PlanItem; refresh: () => Promise<unknown> }) {
   const remove = useMutation({ mutationFn: () => deletePlanItem(item.id), onSuccess: refresh })
-  return <article className="plan-item" style={{ borderLeftColor: item.subjectColor }}><div><strong>{item.title}</strong><small>{item.subjectTitle} · {item.isRequired ? 'обязательно' : 'дополнительно'}</small></div><span className={`lesson-status status-${item.progressStatus}`}>{item.progressStatus === 'completed' ? 'Пройдено' : 'Запланировано'}</span><button className="icon-button icon-danger" aria-label={`Удалить ${item.title}`} disabled={remove.isPending} onClick={() => remove.mutate()}>×</button></article>
+  return <article className="plan-item" style={{ borderLeftColor: item.subjectColor }}><div><strong>{item.title}</strong><small>{item.subjectTitle} · {item.isRequired ? 'обязательно' : 'дополнительно'}</small></div><span className={`lesson-status status-${item.planStatus}`}>{statusLabels[item.planStatus]}</span><button className="icon-button icon-danger" aria-label={`Удалить ${item.title}`} disabled={remove.isPending} onClick={() => remove.mutate()}>×</button></article>
 }
 
 export function WeeklyPlanPage() {
