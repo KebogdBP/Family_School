@@ -19,6 +19,37 @@ function assert(condition, message) {
   if (!condition) throw new Error(message)
 }
 
+async function completePilotLesson({ student, pin, diagnosticResult, quizAnswer, expectedLessonCount }) {
+  const recommendedLesson = await request(`/student/lessons/${diagnosticResult.result.recommendedLessonId}`)
+  assert(recommendedLesson.lesson.quizzes.length === 1 && recommendedLesson.lesson.homeworks.length === 1, `${student.displayName} recommended lesson must contain a quiz and homework`)
+  const quizId = recommendedLesson.lesson.quizzes[0].id
+  const homeworkId = recommendedLesson.lesson.homeworks[0].id
+
+  await request('/auth/logout', { method: 'POST' }); cookie = ''
+  await request('/auth/parent/login', { method: 'POST', body: JSON.stringify({ email: 'parent@homeedu.test', password: 'HomeEdu-test-2026!' }) })
+  await request(`/students/${student.id}/plan-items`, { method: 'POST', body: JSON.stringify({ lessonId: diagnosticResult.result.recommendedLessonId, scheduledDate: new Date().toISOString().slice(0, 10), isRequired: true, position: 0 }) })
+
+  await request('/auth/logout', { method: 'POST' }); cookie = ''
+  await request('/auth/student/login', { method: 'POST', body: JSON.stringify({ studentId: student.id, pin }) })
+  const today = await request('/student/today')
+  assert(today.lessons.some((item) => item.id === diagnosticResult.result.recommendedLessonId), `${student.displayName} recommended lesson is missing from Today`)
+  assert((await request('/student/lessons')).lessons.length === expectedLessonCount, `${student.displayName} pilot lesson count changed unexpectedly`)
+  const quizAttempt = await request(`/student/quizzes/${quizId}/attempts`, { method: 'POST', body: JSON.stringify(quizAnswer) })
+  assert(quizAttempt.attempt.correct, `${student.displayName} pilot quiz was not scored correctly`)
+  const submission = await request(`/student/homeworks/${homeworkId}/submission`, { method: 'PUT', body: JSON.stringify({ responseText: `${student.displayName}: решение и объяснение выполнены самостоятельно.`, submit: true }) })
+  assert(submission.submission.status === 'submitted', `${student.displayName} pilot homework was not submitted`)
+  await request(`/student/lessons/${diagnosticResult.result.recommendedLessonId}/progress`, { method: 'PATCH', body: JSON.stringify({ lastBlockPosition: recommendedLesson.lesson.blocks.length, completed: true }) })
+
+  await request('/auth/logout', { method: 'POST' }); cookie = ''
+  await request('/auth/parent/login', { method: 'POST', body: JSON.stringify({ email: 'parent@homeedu.test', password: 'HomeEdu-test-2026!' }) })
+  const queue = await request('/review-submissions')
+  const work = queue.submissions.find((item) => item.studentName === student.displayName && item.status === 'submitted')
+  assert(work, `${student.displayName} pilot homework is missing from the parent queue`)
+  await request(`/submissions/${work.id}/reviews`, { method: 'POST', body: JSON.stringify({ decision: 'accepted', grade: 5, comment: 'Пилотный урок выполнен.', independentExplanation: true }) })
+  const report = await request(`/students/${student.id}/progress-report`)
+  assert(report.items.some((item) => item.lessonId === diagnosticResult.result.recommendedLessonId && item.planStatus === 'reviewed'), `${student.displayName} completed pilot cycle is missing from progress`)
+}
+
 await request('/health')
 await request('/setup', {
   method: 'POST',
@@ -294,10 +325,12 @@ const davidDiagnosticResult = await request('/student/diagnostic', { method: 'PO
 assert(davidDiagnosticResult.result.score === 75 && davidDiagnosticResult.result.recommendedTopicTitle === 'Дробь как часть целого', 'David diagnostic recommendation is incorrect')
 assert((await request('/student/diagnostic')).completed, 'David diagnostic result was not saved')
 assert((await request('/student/mastery')).topics.some((item) => item.evidence.some((evidence) => evidence.includes('Входная диагностика'))), 'Diagnostic mastery evidence is missing')
+await completePilotLesson({ student: david.student, pin: '1004', diagnosticResult: davidDiagnosticResult, quizAnswer: { selectedOption: 0 }, expectedLessonCount: 7 })
 await request('/auth/logout', { method: 'POST' }); cookie = ''
 await request('/auth/student/login', { method: 'POST', body: JSON.stringify({ studentId: sara.student.id, pin: '1206' }) })
 assert((await request('/student/lessons')).lessons.length === 9, 'Sara cannot access her original lesson and all pilot route lessons')
 const saraDiagnosticResult = await request('/student/diagnostic', { method: 'POST', body: JSON.stringify({ answers: [0, 1, 0, 1] }) })
 assert(saraDiagnosticResult.result.score === 100 && saraDiagnosticResult.result.recommendedTopicTitle === 'Задачи и объяснение', 'Sara diagnostic recommendation is incorrect')
+await completePilotLesson({ student: sara.student, pin: '1206', diagnosticResult: saraDiagnosticResult, quizAnswer: { selectedOptions: [0, 2, 3] }, expectedLessonCount: 9 })
 
-console.log('Integration OK: learning cycle, pilot routes and isolated entry diagnostics are complete')
+console.log('Integration OK: complete isolated pilot learning cycles for David and Sara are verified')

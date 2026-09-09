@@ -87,12 +87,21 @@ final class PlanningApi
         $date = self::date((string) ($body['scheduledDate'] ?? ''));
         self::assertAssignedLesson($db, $familyId, $studentId, $lessonId);
         $weekStart = self::weekStart($date)->format('Y-m-d');
-        $planId = Uuid::v4();
-        $db->prepare('INSERT INTO weekly_plans (id,family_id,student_id,week_start) VALUES (:id,:family_id,:student_id,:week_start) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)')
-            ->execute(['id' => $planId, 'family_id' => $familyId, 'student_id' => $studentId, 'week_start' => $weekStart]);
         $lookup = $db->prepare('SELECT id FROM weekly_plans WHERE student_id=:student_id AND week_start=:week_start');
         $lookup->execute(['student_id' => $studentId, 'week_start' => $weekStart]);
-        $planId = (string) $lookup->fetchColumn();
+        $planId = $lookup->fetchColumn();
+        if (!$planId) {
+            $planId = Uuid::v4();
+            try {
+                $db->prepare('INSERT INTO weekly_plans (id,family_id,student_id,week_start) VALUES (:id,:family_id,:student_id,:week_start)')
+                    ->execute(['id' => $planId, 'family_id' => $familyId, 'student_id' => $studentId, 'week_start' => $weekStart]);
+            } catch (\PDOException $error) {
+                if ($error->getCode() !== '23000') throw $error;
+                $lookup->execute(['student_id' => $studentId, 'week_start' => $weekStart]);
+                $planId = $lookup->fetchColumn();
+                if (!$planId) throw $error;
+            }
+        }
         $id = Uuid::v4();
         try {
             $db->prepare('INSERT INTO plan_items (id,family_id,weekly_plan_id,lesson_id,scheduled_date,is_required,position) VALUES (:id,:family_id,:plan_id,:lesson_id,:date,:required,:position)')
