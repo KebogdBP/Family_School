@@ -8,7 +8,7 @@ HomeEdu — веб-приложение для семейного образов
 - Tailwind CSS, shadcn/ui, Radix UI;
 - PHP REST API;
 - MySQL;
-- Vitest и Playwright.
+- Vitest, Testing Library и HTTP-интеграционные тесты.
 
 ## Локальный запуск frontend
 
@@ -48,18 +48,18 @@ Frontend обращается к API по пути `/api/v1`. В production web-
 ## Проверки
 
 ```bash
-npm run lint
-npm run typecheck
-npm test
-npm run check:php
-npm run build
+npm run test:quality
 ```
+
+Команда последовательно запускает ESLint, проверку TypeScript, быстрые frontend-тесты, проверку синтаксиса PHP и production-сборку. `npm test` запускает только быстрые тесты Vitest.
 
 После запуска API на чистой тестовой базе полный сценарий авторизации можно проверить командой:
 
 ```bash
 HOMEEDU_SETUP_TOKEN=development-setup-token npm run test:api:integration
 ```
+
+Интеграционный сценарий проверяет регистрацию семьи, раздельные профили Сары и Давида, учебные маршруты, диагностику, тесты, домашние задания, файлы, проверку родителем, повторение, достижения, отчёты и запрет доступа к чужим данным. В GitHub Actions он автоматически выполняется в отдельных Docker-контейнерах PHP 8.3 и MySQL 8.4 при каждом push и pull request.
 
 ## Документация
 

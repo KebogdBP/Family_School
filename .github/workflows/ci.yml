@@ -29,3 +29,20 @@ jobs:
         with:
           php-version: '8.2'
       - run: find apps/api -name '*.php' -print0 | xargs -0 -n1 php -l
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: docker compose up -d --build --wait --wait-timeout 120
+      - run: docker compose exec -T api php bin/migrate.php
+      - run: npm run test:api:integration
+      - if: always()
+        run: docker compose logs --no-color api mysql
+      - if: always()
+        run: docker compose down -v

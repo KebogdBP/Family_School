@@ -11,6 +11,7 @@
     "lint": "npm run lint --workspace=@homeedu/web",
     "typecheck": "npm run typecheck --workspace=@homeedu/web",
     "test": "npm run test --workspace=@homeedu/web",
+    "test:quality": "npm run lint && npm run typecheck && npm test && npm run check:php && npm run build",
     "test:api:integration": "node scripts/integration-api.mjs",
     "check:php": "node scripts/check-php-syntax.mjs"
   },
