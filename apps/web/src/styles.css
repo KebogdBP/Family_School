@@ -178,6 +178,12 @@ h2 { margin-bottom: 4px; }
 .review-reminder h2 { margin: 10px 0 4px; }
 .review-reminder ul { margin: 0; display: grid; gap: 8px; }
 .review-reminder li span { display: block; color: #697586; font-size: .85rem; }
+.achievement-summary { margin: 24px 0; }
+.achievements { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.achievement-card { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 16px; border-color: #fdb022; background: #fffcf0; }
+.achievement-card h2, .achievement-card p { margin: 6px 0; }
+.achievement-card small { color: #697586; }
+.achievement-medal { font-size: 2.4rem; }
 .quiz-editor { display: grid; gap: 14px; margin-top: 26px; }
 .quiz-form { display: grid; gap: 14px; }
 .quiz-list { display: grid; gap: 12px; }
@@ -253,7 +259,7 @@ h2 { margin-bottom: 4px; }
   .plan-form { grid-template-columns: 1fr; }
   .plan-form .form-error { grid-column: auto; }
   .feeling-options, .report-summary { grid-template-columns: 1fr 1fr; }
-  .mastery-grid, .review-reminder { grid-template-columns: 1fr; }
+  .mastery-grid, .review-reminder, .achievements { grid-template-columns: 1fr; }
   .review-form { grid-template-columns: 1fr; }
   .review-actions, .review-form .form-error { grid-column: auto; flex-direction: column; }
 }

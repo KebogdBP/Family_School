@@ -21,6 +21,8 @@ final class StudentLearningApi
                 => self::today($db, $familyId, $studentId),
             $method === 'GET' && $path === '/api/v1/student/mastery'
                 => Http::json(['topics'=>Mastery::topics($db,$familyId,$studentId)]),
+            $method === 'GET' && $path === '/api/v1/student/achievements'
+                => Http::json(['achievements'=>Achievements::list($db,$familyId,$studentId)]),
             $method === 'GET' && preg_match('#^/api/v1/student/lessons/([0-9a-f-]{36})$#', $path, $matches) === 1
                 => self::lesson($db, $familyId, $studentId, $matches[1]),
             $method === 'PATCH' && preg_match('#^/api/v1/student/lessons/([0-9a-f-]{36})/progress$#', $path, $matches) === 1

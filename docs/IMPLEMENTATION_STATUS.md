@@ -76,7 +76,9 @@
 - [x] deterministic scoring and parent/student UI for all four quiz question types
 - [x] migration 010 for topic mastery states, evidence and review scheduling
 - [x] evidence-based topic map for parent and personal review reminders for student
+- [x] migration 011 and evidence-backed achievements for revision and durable mastery
+- [x] private student achievements page and achievement summary for parent
 
 ## Следующая задача
 
-Добавить достижения за самостоятельную доработку и устойчивое повторение.
+Добавить достижение за самостоятельное объяснение решения и прогресс по предметам.
