@@ -60,7 +60,10 @@
 - [x] migration 004 for weekly plans and dated plan items
 - [x] parent weekly planner with required and optional lessons
 - [x] isolated student "Today" view
+- [x] migration 005 for student reflections
+- [x] post-lesson self-assessment UI and API
+- [x] parent progress report with help signals
 
 ## Следующая задача
 
-Добавить добровольную самооценку после урока и показать родителю факты открытия и завершения назначений.
+Добавить практические задания и первый тип автоматически проверяемого теста.

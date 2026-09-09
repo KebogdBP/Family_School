@@ -105,6 +105,8 @@ PIN принимается только как строка из 4–8 цифр 
 | POST | `/students/{id}/plan-items` | назначить урок на день |
 | DELETE | `/plan-items/{id}` | убрать назначение |
 | GET | `/student/today` | назначенные текущему ученику уроки на сегодня |
+| POST | `/student/lessons/{id}/reflection` | сохранить самооценку завершённого урока |
+| GET | `/students/{id}/progress-report` | родительский отчёт по назначениям и обратной связи |
 | PATCH | `/content-blocks/{id}` | изменить содержимое, тип или позицию |
 | DELETE | `/content-blocks/{id}` | удалить блок |
 

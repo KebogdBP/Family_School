@@ -23,6 +23,8 @@ final class StudentLearningApi
                 => self::lesson($db, $familyId, $studentId, $matches[1]),
             $method === 'PATCH' && preg_match('#^/api/v1/student/lessons/([0-9a-f-]{36})/progress$#', $path, $matches) === 1
                 => self::saveProgress($db, $familyId, $studentId, $matches[1]),
+            $method === 'POST' && preg_match('#^/api/v1/student/lessons/([0-9a-f-]{36})/reflection$#', $path, $matches) === 1
+                => self::saveReflection($db, $familyId, $studentId, $matches[1]),
             default => Http::error('not_found', 'Маршрут не найден', 404),
         };
     }
@@ -90,7 +92,10 @@ final class StudentLearningApi
             'content' => json_decode((string) $row['content_json'], true, flags: JSON_THROW_ON_ERROR),
             'position' => (int) $row['position'],
         ], $blocks->fetchAll());
-        Http::json(['lesson' => self::lessonSummary($lesson) + ['blocks' => $lesson['blocks']]]);
+        $reflection = $db->prepare('SELECT feeling, comment FROM student_reflections WHERE student_id=:student_id AND lesson_id=:lesson_id');
+        $reflection->execute(['student_id' => $studentId, 'lesson_id' => $lessonId]);
+        $savedReflection = $reflection->fetch();
+        Http::json(['lesson' => self::lessonSummary($lesson) + ['blocks' => $lesson['blocks'], 'reflection' => $savedReflection ? ['feeling' => $savedReflection['feeling'], 'comment' => $savedReflection['comment']] : null]]);
     }
 
     private static function saveProgress(PDO $db, string $familyId, string $studentId, string $lessonId): never
@@ -114,6 +119,22 @@ final class StudentLearningApi
         ]);
         Audit::record($db, $familyId, 'student', $studentId, $completed ? 'lesson.completed' : 'lesson.progressed', 'lesson', $lessonId);
         Http::json(['progress' => ['status' => $status, 'lastBlockPosition' => $lastBlockPosition]]);
+    }
+
+    private static function saveReflection(PDO $db, string $familyId, string $studentId, string $lessonId): never
+    {
+        $lesson = self::assignedLesson($db, $familyId, $studentId, $lessonId);
+        if ($lesson['progress_status'] !== 'completed') Http::error('lesson_not_completed', 'Сначала завершите урок', 409);
+        $body = Http::body();
+        $feeling = (string) ($body['feeling'] ?? '');
+        if (!in_array($feeling, ['easy', 'good', 'hard', 'need_help'], true)) Http::error('validation_error', 'Выберите оценку урока', 422);
+        $comment = trim((string) ($body['comment'] ?? ''));
+        if (mb_strlen($comment) > 500) Http::error('validation_error', 'Комментарий не длиннее 500 символов', 422);
+        $id = Uuid::v4();
+        $db->prepare('INSERT INTO student_reflections (id,family_id,student_id,lesson_id,feeling,comment) VALUES (:id,:family_id,:student_id,:lesson_id,:feeling,:comment) ON DUPLICATE KEY UPDATE feeling=VALUES(feeling),comment=VALUES(comment),updated_at=NOW()')
+            ->execute(['id' => $id, 'family_id' => $familyId, 'student_id' => $studentId, 'lesson_id' => $lessonId, 'feeling' => $feeling, 'comment' => $comment === '' ? null : $comment]);
+        Audit::record($db, $familyId, 'student', $studentId, 'lesson.reflected', 'lesson', $lessonId);
+        Http::json(['reflection' => ['feeling' => $feeling, 'comment' => $comment === '' ? null : $comment]]);
     }
 
     /** @return array<string, mixed> */

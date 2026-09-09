@@ -10,6 +10,7 @@ import { LessonEditorPage } from '@/pages/LessonEditorPage'
 import { StudentLessonPage } from '@/pages/StudentLessonPage'
 import { getTodayLessons, type StudentLessonSummary } from '@/entities/learning/api'
 import { WeeklyPlanPage } from '@/pages/WeeklyPlanPage'
+import { ProgressReportPage } from '@/pages/ProgressReportPage'
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
@@ -116,7 +117,7 @@ function StudentCard({ student, onLoggedIn }: { student: Student; onLoggedIn: (p
     mutationFn: () => loginStudent({ studentId: student.id, pin }),
     onSuccess: async () => onLoggedIn((await getMe()).principal),
   })
-  return <article className="card child-card"><div className="avatar" style={{ background: student.avatarColor }}>{student.displayName.slice(0, 1).toUpperCase()}</div><div><h2>{student.displayName}</h2><p className="muted">{student.grade} класс{student.age ? ` · ${student.age} лет` : ''}</p></div><span className="badge">Профиль ученика</span><div className="card-actions"><NavLink className="button-link button-ghost" to={`/children/${student.id}/curriculum`}>Учебная программа</NavLink><NavLink className="button-link button-ghost" to={`/children/${student.id}/plan`}>План недели</NavLink>{open ? <form className="pin-form" onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}><input aria-label={`PIN для ${student.displayName}`} autoFocus inputMode="numeric" pattern="[0-9]{4,8}" placeholder="Введите PIN" required value={pin} onChange={(event) => setPin(event.target.value)} /><button disabled={mutation.isPending}>Войти</button><ErrorText error={mutation.error} /></form> : <button onClick={() => setOpen(true)}>Перейти в профиль</button>}</div></article>
+  return <article className="card child-card"><div className="avatar" style={{ background: student.avatarColor }}>{student.displayName.slice(0, 1).toUpperCase()}</div><div><h2>{student.displayName}</h2><p className="muted">{student.grade} класс{student.age ? ` · ${student.age} лет` : ''}</p></div><span className="badge">Профиль ученика</span><div className="card-actions"><NavLink className="button-link button-ghost" to={`/children/${student.id}/curriculum`}>Учебная программа</NavLink><NavLink className="button-link button-ghost" to={`/children/${student.id}/plan`}>План недели</NavLink><NavLink className="button-link button-ghost" to={`/children/${student.id}/report`}>Отчёт</NavLink>{open ? <form className="pin-form" onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}><input aria-label={`PIN для ${student.displayName}`} autoFocus inputMode="numeric" pattern="[0-9]{4,8}" placeholder="Введите PIN" required value={pin} onChange={(event) => setPin(event.target.value)} /><button disabled={mutation.isPending}>Войти</button><ErrorText error={mutation.error} /></form> : <button onClick={() => setOpen(true)}>Перейти в профиль</button>}</div></article>
 }
 
 function ChildrenPage() {
@@ -153,6 +154,7 @@ function RoutedApp() {
     <Route path="/children" element={principal?.role === 'parent' ? <AppShell principal={principal}><ChildrenPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} />
     <Route path="/children/:studentId/curriculum" element={principal?.role === 'parent' ? <AppShell principal={principal}><CurriculumPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} />
     <Route path="/children/:studentId/plan" element={principal?.role === 'parent' ? <AppShell principal={principal}><WeeklyPlanPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} />
+    <Route path="/children/:studentId/report" element={principal?.role === 'parent' ? <AppShell principal={principal}><ProgressReportPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} />
     <Route path="/lessons/:lessonId/edit" element={principal?.role === 'parent' ? <AppShell principal={principal}><LessonEditorPage /></AppShell> : <Navigate to={principal ? '/today' : '/login'} replace />} />
     <Route path="/today" element={principal?.role === 'student' ? <AppShell principal={principal}><TodayPage principal={principal} /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} />
     <Route path="/study/lessons/:lessonId" element={principal?.role === 'student' ? <AppShell principal={principal}><StudentLessonPage /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} />

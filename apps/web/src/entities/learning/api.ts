@@ -8,7 +8,9 @@ export type StudentLessonSummary = {
   subjectTitle: string; subjectColor: string; sectionTitle: string; topicTitle: string
   progress: Progress; blockCount: number
 }
-export type StudentLesson = StudentLessonSummary & { blocks: LessonBlock[] }
+export type ReflectionFeeling = 'easy' | 'good' | 'hard' | 'need_help'
+export type Reflection = { feeling: ReflectionFeeling; comment: string | null }
+export type StudentLesson = StudentLessonSummary & { blocks: LessonBlock[]; reflection: Reflection | null }
 export type TodayLesson = StudentLessonSummary & { planItemId: string; isRequired: boolean }
 
 export const getStudentLessons = () => api<{ lessons: StudentLessonSummary[] }>('/student/lessons')
@@ -18,3 +20,5 @@ export const saveLessonProgress = (lessonId: string, lastBlockPosition: number, 
   api<{ progress: Progress }>(`/student/lessons/${lessonId}/progress`, {
     method: 'PATCH', body: JSON.stringify({ lastBlockPosition, completed }),
   })
+export const saveReflection = (lessonId: string, feeling: ReflectionFeeling, comment: string) =>
+  api<{ reflection: Reflection }>(`/student/lessons/${lessonId}/reflection`, { method: 'POST', body: JSON.stringify({ feeling, comment }) })

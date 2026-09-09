@@ -17,6 +17,8 @@ final class PlanningApi
         match (true) {
             $method === 'GET' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/weekly-plan$#', $path, $m) === 1
                 => self::getPlan($db, $familyId, $m[1]),
+            $method === 'GET' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/progress-report$#', $path, $m) === 1
+                => self::progressReport($db, $familyId, $m[1]),
             $method === 'POST' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/plan-items$#', $path, $m) === 1
                 => self::addItem($db, $familyId, $actorId, $m[1]),
             $method === 'DELETE' && preg_match('#^/api/v1/plan-items/([0-9a-f-]{36})$#', $path, $m) === 1
@@ -83,6 +85,39 @@ final class PlanningApi
         }
         Audit::record($db, $familyId, 'parent', $actorId, 'plan_item.created', 'plan_item', $id);
         Http::json(['planItem' => ['id' => $id]], 201);
+    }
+
+    private static function progressReport(PDO $db, string $familyId, string $studentId): never
+    {
+        self::assertStudent($db, $familyId, $studentId);
+        $statement = $db->prepare(
+            'SELECT pi.id, pi.scheduled_date, pi.is_required, l.id AS lesson_id, l.title,
+                    s.title AS subject_title, s.color AS subject_color,
+                    COALESCE(lp.status, \'not_started\') AS progress_status, lp.started_at, lp.completed_at,
+                    sr.feeling, sr.comment, sr.updated_at AS reflected_at
+             FROM weekly_plans wp JOIN plan_items pi ON pi.weekly_plan_id=wp.id
+             JOIN lessons l ON l.id=pi.lesson_id JOIN topics t ON t.id=l.topic_id
+             JOIN sections se ON se.id=t.section_id JOIN curriculum_subjects cs ON cs.id=se.curriculum_subject_id
+             JOIN subjects s ON s.id=cs.subject_id
+             LEFT JOIN lesson_progress lp ON lp.lesson_id=l.id AND lp.student_id=wp.student_id
+             LEFT JOIN student_reflections sr ON sr.lesson_id=l.id AND sr.student_id=wp.student_id
+             WHERE wp.student_id=:student_id AND wp.family_id=:family_id
+             ORDER BY pi.scheduled_date DESC, pi.position'
+        );
+        $statement->execute(['student_id' => $studentId, 'family_id' => $familyId]);
+        $items = array_map(static fn (array $row): array => [
+            'id'=>$row['id'],'lessonId'=>$row['lesson_id'],'title'=>$row['title'],'subjectTitle'=>$row['subject_title'],'subjectColor'=>$row['subject_color'],
+            'scheduledDate'=>$row['scheduled_date'],'isRequired'=>(bool)$row['is_required'],'progressStatus'=>$row['progress_status'],
+            'startedAt'=>$row['started_at'],'completedAt'=>$row['completed_at'],
+            'reflection'=>$row['feeling'] ? ['feeling'=>$row['feeling'],'comment'=>$row['comment'],'updatedAt'=>$row['reflected_at']] : null,
+        ], $statement->fetchAll());
+        $summary = ['total'=>count($items),'notStarted'=>0,'inProgress'=>0,'completed'=>0,'needsHelp'=>0];
+        foreach ($items as $item) {
+            $key = match ($item['progressStatus']) { 'completed'=>'completed','in_progress'=>'inProgress',default=>'notStarted' };
+            $summary[$key]++;
+            if (($item['reflection']['feeling'] ?? null) === 'need_help') $summary['needsHelp']++;
+        }
+        Http::json(['summary'=>$summary,'items'=>$items]);
     }
 
     private static function removeItem(PDO $db, string $familyId, string $actorId, string $id): never

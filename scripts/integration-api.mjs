@@ -117,6 +117,11 @@ await request(`/student/lessons/${lesson.lesson.id}/progress`, {
 })
 const completedLessons = await request('/student/lessons')
 assert(completedLessons.lessons[0].progress.status === 'completed', 'Lesson completion was not saved')
+await request(`/student/lessons/${lesson.lesson.id}/reflection`, {
+  method: 'POST', body: JSON.stringify({ feeling: 'need_help', comment: 'Нужно повторить знаменатели' }),
+})
+const reflectedLesson = await request(`/student/lessons/${lesson.lesson.id}`)
+assert(reflectedLesson.lesson.reflection.feeling === 'need_help', 'Student reflection was not saved')
 
 await request('/auth/logout', { method: 'POST' })
 cookie = ''
@@ -128,4 +133,12 @@ assert(davidLessons.lessons.length === 0, 'David must not see Sara lessons')
 const davidToday = await request('/student/today')
 assert(davidToday.lessons.length === 0, 'David must not see Sara plan')
 
-console.log('Integration OK: auth, separate weekly plans, today view, lesson content and persistent progress')
+await request('/auth/logout', { method: 'POST' })
+cookie = ''
+await request('/auth/parent/login', {
+  method: 'POST', body: JSON.stringify({ email: 'parent@homeedu.test', password: 'HomeEdu-test-2026!' }),
+})
+const report = await request(`/students/${sara.student.id}/progress-report`)
+assert(report.summary.completed === 1 && report.summary.needsHelp === 1, 'Parent report is incorrect')
+
+console.log('Integration OK: plans, progress, student reflection and parent report are isolated and persistent')
