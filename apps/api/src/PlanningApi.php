@@ -151,7 +151,8 @@ final class PlanningApi
         $summary['masteredTopics']=count(array_filter($mastery,static fn(array $topic):bool=>$topic['status']==='mastered'));
         $summary['topicsToReview']=count(array_filter($mastery,static fn(array $topic):bool=>$topic['status']==='needs_reinforcement'));
         $achievements=Achievements::list($db,$familyId,$studentId);$summary['achievements']=count($achievements);
-        Http::json(['summary'=>$summary,'dailyDigest'=>self::dailyDigest($items),'items'=>$items,'reviewTasks'=>Mastery::reviewTasks($db,$familyId,$studentId),'masterySubjects'=>Mastery::subjects($db,$familyId,$studentId),'mastery'=>$mastery,'achievements'=>$achievements]);
+        $reviewTasks=Mastery::reviewTasks($db,$familyId,$studentId);
+        Http::json(['summary'=>$summary,'dailyDigest'=>self::dailyDigest($items),'weeklyDigest'=>self::weeklyDigest($db,$familyId,$studentId,$items,$mastery,$reviewTasks),'items'=>$items,'reviewTasks'=>$reviewTasks,'masterySubjects'=>Mastery::subjects($db,$familyId,$studentId),'mastery'=>$mastery,'achievements'=>$achievements]);
     }
 
     /** @param array<int,array<string,mixed>> $items @return array<string,mixed> */
@@ -167,6 +168,34 @@ final class PlanningApi
         }
         $planned=count($todayItems);$message=$planned===0?'На сегодня заданий нет.':($attention!==[]?'Есть задания, которым нужно внимание.':($counts['reviewed']===$planned?'План на сегодня полностью выполнен и проверен.':"Проверено {$counts['reviewed']} из {$planned} заданий на сегодня."));
         return ['date'=>$today,'planned'=>$planned,...$counts,'attention'=>$attention,'message'=>$message];
+    }
+
+    /** @param array<int,array<string,mixed>> $items @param array<int,array<string,mixed>> $mastery @param array<int,array<string,mixed>> $reviewTasks @return array<string,mixed> */
+    private static function weeklyDigest(PDO $db,string $familyId,string $studentId,array $items,array $mastery,array $reviewTasks): array
+    {
+        $start=(new DateTimeImmutable('today'))->modify('monday this week');$end=$start->modify('+6 days');$startDate=$start->format('Y-m-d');$endDate=$end->format('Y-m-d');
+        $weekItems=array_values(array_filter($items,static fn(array $item):bool=>$item['scheduledDate']>=$startDate&&$item['scheduledDate']<=$endDate));
+        $reviewed=count(array_filter($weekItems,static fn(array $item):bool=>$item['planStatus']==='reviewed'));
+        $completedLessons=count(array_filter($weekItems,static fn(array $item):bool=>$item['progressStatus']==='completed'));
+
+        $masteredStatement=$db->prepare('SELECT t.id,t.title,s.title AS subject_title FROM achievements a JOIN topics t ON t.id=a.source_id JOIN sections se ON se.id=t.section_id JOIN curriculum_subjects cs ON cs.id=se.curriculum_subject_id JOIN subjects s ON s.id=cs.subject_id WHERE a.family_id=:family_id AND a.student_id=:student_id AND a.code=\'durable_mastery\' AND DATE(a.earned_at) BETWEEN :week_start AND :week_end ORDER BY a.earned_at DESC');
+        $masteredStatement->execute(['family_id'=>$familyId,'student_id'=>$studentId,'week_start'=>$startDate,'week_end'=>$endDate]);
+        $masteredTopics=array_map(static fn(array $row):array=>['id'=>$row['id'],'title'=>$row['title'],'subjectTitle'=>$row['subject_title']],$masteredStatement->fetchAll());
+        $completedStatement=$db->prepare('SELECT t.id,t.title,s.title AS subject_title,DATE(rs.completed_at) AS completed_date FROM review_schedule rs JOIN topics t ON t.id=rs.topic_id JOIN sections se ON se.id=t.section_id JOIN curriculum_subjects cs ON cs.id=se.curriculum_subject_id JOIN subjects s ON s.id=cs.subject_id WHERE rs.family_id=:family_id AND rs.student_id=:student_id AND rs.status=\'completed\' AND DATE(rs.completed_at) BETWEEN :week_start AND :week_end ORDER BY rs.completed_at DESC');
+        $completedStatement->execute(['family_id'=>$familyId,'student_id'=>$studentId,'week_start'=>$startDate,'week_end'=>$endDate]);
+        $completedReviews=array_map(static fn(array $row):array=>['id'=>$row['id'],'title'=>$row['title'],'subjectTitle'=>$row['subject_title'],'completedDate'=>$row['completed_date']],$completedStatement->fetchAll());
+
+        $difficulties=[];$suggestions=[];
+        foreach($weekItems as $item){
+            $reasons=[];if($item['planStatus']==='needs_revision')$reasons[]='нужна доработка';if(($item['reflection']['feeling']??null)==='need_help')$reasons[]='ребёнок попросил помощи';
+            if($reasons!==[]){$difficulties[$item['lessonId']]=['id'=>$item['lessonId'],'title'=>$item['title'],'subjectTitle'=>$item['subjectTitle'],'reason'=>implode(' · ',$reasons)];$suggestions['lesson-'.$item['lessonId']]=['kind'=>'lesson','title'=>'Вернуться к уроку «'.$item['title'].'»','reason'=>implode(' · ',$reasons)];}
+            elseif($item['isRequired']&&in_array($item['planStatus'],['assigned','in_progress'],true))$suggestions['lesson-'.$item['lessonId']]=['kind'=>'lesson','title'=>'Завершить «'.$item['title'].'»','reason'=>'обязательное задание текущей недели ещё не завершено'];
+        }
+        foreach($mastery as $topic)if($topic['status']==='needs_reinforcement'){$difficulties['topic-'.$topic['id']]=['id'=>$topic['id'],'title'=>$topic['title'],'subjectTitle'=>$topic['subjectTitle'],'reason'=>'тема требует закрепления'];}
+        foreach($reviewTasks as $task)$suggestions['review-'.$task['topicId']]=['kind'=>'review','title'=>'Повторить тему «'.$task['topicTitle'].'»','reason'=>$task['isDue']?'повторение уже доступно':'повторение назначено на '.$task['dueDate']];
+        foreach($mastery as $topic)if($topic['status']==='needs_reinforcement'&&!isset($suggestions['review-'.$topic['id']]))$suggestions['topic-'.$topic['id']]=['kind'=>'topic','title'=>'Добавить практику по теме «'.$topic['title'].'»','reason'=>'по теме недостаточно устойчивых подтверждений'];
+        $planned=count($weekItems);$percent=$planned===0?0:(int)round($reviewed/$planned*100);
+        return ['weekStart'=>$startDate,'weekEnd'=>$endDate,'planned'=>$planned,'reviewed'=>$reviewed,'completedLessons'=>$completedLessons,'completionPercent'=>$percent,'masteredTopics'=>$masteredTopics,'completedReviews'=>$completedReviews,'difficulties'=>array_values($difficulties),'suggestions'=>array_slice(array_values($suggestions),0,6)];
     }
 
     private static function removeItem(PDO $db, string $familyId, string $actorId, string $id): never

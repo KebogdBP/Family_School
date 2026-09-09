@@ -92,7 +92,8 @@
 - [x] personal “continue last lesson” action based on the latest unfinished activity
 - [x] unified weekly plan status derived from lesson progress and homework review state
 - [x] server-calculated parent daily digest with completion, review queue and help signals
+- [x] weekly digest with plan completion, mastered topics, completed reviews, difficulties and deterministic next-plan suggestions
 
 ## Следующая задача
 
-Добавить недельную сводку с освоенными темами, повторениями, затруднениями и основой следующего плана.
+Добавить безопасный экспорт данных семьи в машиночитаемом формате.

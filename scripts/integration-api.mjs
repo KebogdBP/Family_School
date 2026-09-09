@@ -258,4 +258,11 @@ assert(mastered.topics[0].status === 'mastered', 'Successful review did not mast
 assert((await request('/student/reviews')).reviewTasks.length === 0, 'Completed review task stayed active')
 assert((await request('/student/achievements')).achievements.some((item) => item.code === 'durable_mastery'), 'Durable mastery achievement was not awarded')
 
+await request('/auth/logout', { method: 'POST' }); cookie = ''
+await request('/auth/parent/login', { method: 'POST', body: JSON.stringify({ email: 'parent@homeedu.test', password: 'HomeEdu-test-2026!' }) })
+const weeklyDigestReport = await request(`/students/${sara.student.id}/progress-report`)
+assert(weeklyDigestReport.weeklyDigest.planned === 1 && weeklyDigestReport.weeklyDigest.completionPercent === 100, 'Weekly completion summary is incorrect')
+assert(weeklyDigestReport.weeklyDigest.masteredTopics.length === 1 && weeklyDigestReport.weeklyDigest.completedReviews.length === 1, 'Weekly mastery and review results are missing')
+assert(weeklyDigestReport.weeklyDigest.difficulties.some((item) => item.reason.includes('попросил помощи')), 'Weekly difficulty signal is missing')
+
 console.log('Integration OK: custom review quiz is assembled, scored and closes the mastery schedule')
