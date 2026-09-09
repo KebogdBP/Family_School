@@ -65,3 +65,7 @@ export const deleteHomework = (id: string) => api<{ status: string }>(`/homework
 export type PilotContentResult = { installed: boolean; alreadyInstalled: boolean; curriculumId: string; routeCode: string; counts?: { topics: number; lessons: number; competencies: number; quizzes: number; homeworks: number } }
 export const installDavidFractions = (studentId: string) => api<PilotContentResult>(`/students/${studentId}/pilot-content/david-fractions`, { method: 'POST' })
 export const installSaraFractions = (studentId: string) => api<PilotContentResult>(`/students/${studentId}/pilot-content/sara-fractions`, { method: 'POST' })
+export type AiQuizDraft = { id: string; title: string; prompt: string; options: string[]; correctOption: number; explanation: string; status: 'draft' | 'approved'; activityId: string | null }
+export const getAiQuizDrafts = (lessonId: string) => api<{ drafts: AiQuizDraft[] }>(`/lessons/${lessonId}/ai-quiz-drafts`)
+export const generateAiQuizDraft = (lessonId: string) => api<{ draft: AiQuizDraft }>(`/lessons/${lessonId}/ai-quiz-drafts`, { method: 'POST' })
+export const approveAiQuizDraft = (draftId: string) => api<{ approved: boolean; activityId: string }>(`/ai-quiz-drafts/${draftId}/approve`, { method: 'POST' })

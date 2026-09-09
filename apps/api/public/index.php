@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use HomeEdu\AiApi;
 use HomeEdu\Audit;
 use HomeEdu\Auth;
 use HomeEdu\CurriculumApi;
@@ -42,6 +43,7 @@ try {
         $method === 'GET' && $path === '/api/v1/students' => listStudents($db),
         $method === 'POST' && $path === '/api/v1/students' => createStudent($db),
         $method === 'PATCH' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/pin$#', $path, $matches) === 1 => updateStudentPin($db, $matches[1]),
+        preg_match('#^/api/v1/(student/lessons/[0-9a-f-]{36}/ai-hints|lessons/[0-9a-f-]{36}/ai-quiz-drafts|ai-quiz-drafts/[0-9a-f-]{36}/approve)$#',$path)===1 => AiApi::dispatch($db,$method,$path),
         preg_match('#^/api/v1/(lessons/[0-9a-f-]{36}/quizzes|quizzes/[0-9a-f-]{36}|student/quizzes/[0-9a-f-]{36}/attempts)$#', $path) === 1 => QuizApi::dispatch($db, $method, $path),
         preg_match('#^/api/v1/student/reviews/[0-9a-f-]{36}$#', $path) === 1 => ReviewApi::dispatch($db, $method, $path),
         preg_match('#^/api/v1/(lessons/[0-9a-f-]{36}/homeworks|homeworks/[0-9a-f-]{36}|student/homeworks/[0-9a-f-]{36}/(submission|files)|submission-files/[0-9a-f-]{36}|review-submissions|submissions/[0-9a-f-]{36}/reviews)$#', $path) === 1 => HomeworkApi::dispatch($db, $method, $path),

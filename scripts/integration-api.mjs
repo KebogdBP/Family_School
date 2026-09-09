@@ -333,4 +333,27 @@ const saraDiagnosticResult = await request('/student/diagnostic', { method: 'POS
 assert(saraDiagnosticResult.result.score === 100 && saraDiagnosticResult.result.recommendedTopicTitle === 'Задачи и объяснение', 'Sara diagnostic recommendation is incorrect')
 await completePilotLesson({ student: sara.student, pin: '1206', diagnosticResult: saraDiagnosticResult, quizAnswer: { selectedOptions: [0, 2, 3] }, expectedLessonCount: 9 })
 
-console.log('Integration OK: complete isolated pilot learning cycles for David and Sara are verified')
+const aiLessonId = davidTree.curriculum.subjects[0].sections[0].topics[1].lessons[0].id
+const aiDraft = await request(`/lessons/${aiLessonId}/ai-quiz-drafts`, { method: 'POST' })
+assert(aiDraft.draft.status === 'draft' && aiDraft.draft.options.length === 3, 'AI quiz draft was not generated')
+assert((await request(`/lessons/${aiLessonId}/ai-quiz-drafts`)).drafts.length === 1, 'AI quiz draft was not saved')
+await request('/auth/logout', { method: 'POST' }); cookie = ''
+await request('/auth/student/login', { method: 'POST', body: JSON.stringify({ studentId: david.student.id, pin: '1004' }) })
+assert((await request(`/student/lessons/${aiLessonId}`)).lesson.quizzes.length === 1, 'Unapproved AI quiz leaked to David')
+const hint = await request(`/student/lessons/${aiLessonId}/ai-hints`, { method: 'POST', body: JSON.stringify({ question: 'Я не понимаю, как начать сравнение дробей.' }) })
+assert(hint.safety === 'no_direct_answer' && hint.hint.length > 30, 'Safe AI hint was not returned')
+const forbiddenApproval = await fetch(`${baseUrl}/ai-quiz-drafts/${aiDraft.draft.id}/approve`, { method: 'POST', headers: { Cookie: cookie } })
+assert(forbiddenApproval.status === 403, 'Student must not approve an AI quiz draft')
+await request('/auth/logout', { method: 'POST' }); cookie = ''
+await request('/auth/parent/login', { method: 'POST', body: JSON.stringify({ email: 'parent@homeedu.test', password: 'HomeEdu-test-2026!' }) })
+const approval = await request(`/ai-quiz-drafts/${aiDraft.draft.id}/approve`, { method: 'POST' })
+assert(approval.approved, 'Parent could not approve an AI quiz draft')
+await request('/auth/logout', { method: 'POST' }); cookie = ''
+await request('/auth/student/login', { method: 'POST', body: JSON.stringify({ studentId: david.student.id, pin: '1004' }) })
+assert((await request(`/student/lessons/${aiLessonId}`)).lesson.quizzes.length === 2, 'Approved AI quiz is not visible to David')
+await request('/auth/logout', { method: 'POST' }); cookie = ''
+await request('/auth/parent/login', { method: 'POST', body: JSON.stringify({ email: 'parent@homeedu.test', password: 'HomeEdu-test-2026!' }) })
+const aiExport = await request('/family/export')
+assert(aiExport.data.aiQuizDrafts.length === 1 && aiExport.data.aiInteractions.length === 2, 'AI audit data is missing from family export')
+
+console.log('Integration OK: pilot cycles and the safe AI draft approval boundary are verified')

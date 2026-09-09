@@ -15,6 +15,8 @@ students ──< diagnostic_attempts >── topics / lessons
 topics ──< review_schedule ──< review_attempts
 topics ──< review_question_settings >── quiz_questions
 students ──< pilot_content_installs
+lessons ──< ai_quiz_drafts
+lessons ──< ai_interactions >── students
 ```
 
 ## Инварианты
@@ -32,5 +34,6 @@ students ──< pilot_content_installs
 - семейный JSON-экспорт строится только по `family_id` из родительской сессии и использует явный список разрешённых полей;
 - `password_hash`, `pin_hash`, сессии, ограничения входа, внутренние имена и бинарное содержимое файлов не экспортируются.
 - `pilot_content_installs` фиксирует версию установленного стартового маршрута и не позволяет повторному запуску создавать дубликаты.
+- AI вызывается только сервером; `ai_interactions` хранит минимальный журнал подсказок, а `ai_quiz_drafts` отделяет генерацию теста от родительского утверждения.
 
 Полная схема последовательно создаётся SQL-миграциями из `apps/api/migrations`.

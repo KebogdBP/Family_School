@@ -47,6 +47,8 @@ final class FamilyExportApi
             'reviewQuestionSettings'=>'id,family_id,student_id,topic_id,question_id,position,created_at',
             'pilotContentInstalls'=>'id,family_id,student_id,route_code,curriculum_id,section_id,installed_at',
             'diagnosticAttempts'=>'id,family_id,student_id,route_code,score,answers_json,recommended_topic_id,recommended_lesson_id,completed_at',
+            'aiQuizDrafts'=>'id,family_id,lesson_id,created_by,title,prompt,options_json,correct_option,explanation,status,approved_activity_id,created_at,approved_at',
+            'aiInteractions'=>'id,family_id,student_id,lesson_id,interaction_type,provider,request_excerpt,response_json,created_at',
             'auditEvents'=>'id,family_id,actor_role,actor_id,event_type,entity_type,entity_id,metadata_json,created_at',
         ];
         foreach($tables as $key=>$columns){$table=self::tableName($key);$collections[$key]=self::rows($db,"SELECT $columns FROM $table WHERE family_id=:family_id",['family_id'=>$familyId]);}
@@ -60,7 +62,7 @@ final class FamilyExportApi
 
     private static function tableName(string $key): string
     {
-        return match($key){'curriculumSubjects'=>'curriculum_subjects','competencyPrerequisites'=>'competency_prerequisites','contentBlocks'=>'content_blocks','lessonProgress'=>'lesson_progress','weeklyPlans'=>'weekly_plans','planItems'=>'plan_items','studentReflections'=>'student_reflections','quizQuestions'=>'quiz_questions','quizAttempts'=>'quiz_attempts','homeworkSubmissions'=>'homework_submissions','submissionFiles'=>'submission_files','submissionReviews'=>'submission_reviews','masteryEvidence'=>'mastery_evidence','masteryStates'=>'mastery_states','reviewSchedule'=>'review_schedule','subjectMasterySettings'=>'subject_mastery_settings','reviewAttempts'=>'review_attempts','reviewQuestionSettings'=>'review_question_settings','pilotContentInstalls'=>'pilot_content_installs','diagnosticAttempts'=>'diagnostic_attempts','auditEvents'=>'audit_events',default=>$key};
+        return match($key){'curriculumSubjects'=>'curriculum_subjects','competencyPrerequisites'=>'competency_prerequisites','contentBlocks'=>'content_blocks','lessonProgress'=>'lesson_progress','weeklyPlans'=>'weekly_plans','planItems'=>'plan_items','studentReflections'=>'student_reflections','quizQuestions'=>'quiz_questions','quizAttempts'=>'quiz_attempts','homeworkSubmissions'=>'homework_submissions','submissionFiles'=>'submission_files','submissionReviews'=>'submission_reviews','masteryEvidence'=>'mastery_evidence','masteryStates'=>'mastery_states','reviewSchedule'=>'review_schedule','subjectMasterySettings'=>'subject_mastery_settings','reviewAttempts'=>'review_attempts','reviewQuestionSettings'=>'review_question_settings','pilotContentInstalls'=>'pilot_content_installs','diagnosticAttempts'=>'diagnostic_attempts','aiQuizDrafts'=>'ai_quiz_drafts','aiInteractions'=>'ai_interactions','auditEvents'=>'audit_events',default=>$key};
     }
 
     /** @param array<string,mixed> $params @return array<int,array<string,mixed>> */

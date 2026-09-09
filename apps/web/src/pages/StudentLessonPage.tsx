@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { NavLink, useParams } from 'react-router-dom'
 import { useState } from 'react'
-import { deleteHomeworkFile, getStudentLesson, saveHomeworkSubmission, saveLessonProgress, saveReflection, submitQuizAttempt, uploadHomeworkFile, type ReflectionFeeling, type StudentHomework, type StudentQuiz } from '@/entities/learning/api'
+import { deleteHomeworkFile, getStudentLesson, requestAiHint, saveHomeworkSubmission, saveLessonProgress, saveReflection, submitQuizAttempt, uploadHomeworkFile, type ReflectionFeeling, type StudentHomework, type StudentQuiz } from '@/entities/learning/api'
 import type { LessonBlock } from '@/entities/curriculum/api'
 
 function LearningBlock({ block }: { block: LessonBlock }) {
@@ -54,6 +54,11 @@ function HomeworkCard({ homework, refresh }: { homework: StudentHomework; refres
   </form>
 }
 
+function AiHint({ lessonId }: { lessonId: string }) {
+  const [question,setQuestion]=useState('');const hint=useMutation({mutationFn:()=>requestAiHint(lessonId,question)})
+  return <form className="card ai-hint" onSubmit={(event)=>{event.preventDefault();hint.mutate()}}><span className="badge">AI-помощник</span><h2>Нужна подсказка?</h2><p className="muted">Помощник задаст наводящий вопрос, но не выдаст готовый ответ.</p><textarea rows={2} maxLength={500} required placeholder="Напиши, на каком шаге стало трудно" value={question} onChange={(event)=>setQuestion(event.target.value)}/><button disabled={!question.trim()||hint.isPending}>{hint.isPending?'Думаю…':'Получить подсказку'}</button>{hint.data&&<div className="ai-hint-answer" role="status"><strong>Попробуй так:</strong><p>{hint.data.hint}</p></div>}{hint.error&&<p className="form-error">{hint.error.message}</p>}</form>
+}
+
 export function StudentLessonPage() {
   const { lessonId = '' } = useParams()
   const client = useQueryClient()
@@ -73,7 +78,7 @@ export function StudentLessonPage() {
   if (query.isLoading) return <p>Открываем урок…</p>
   if (!lesson) return <section className="card empty"><h2>Урок не найден</h2><NavLink className="button-link button-ghost" to="/today">Вернуться к урокам</NavLink></section>
   return <div className="focus-lesson"><header className="lesson-focus-header"><NavLink className="text-link" to="/today">← Мои уроки</NavLink><div><p className="eyebrow" style={{ color: lesson.subjectColor }}>{lesson.subjectTitle}</p><h1>{lesson.title}</h1><p className="muted">{lesson.sectionTitle} · {lesson.topicTitle}</p></div><div className="progress-wrap"><div className="progress-label"><strong>{completed ? 'Готово!' : 'Прохождение урока'}</strong><span>{completed ? 100 : progress}%</span></div><div className="progress-track"><div style={{ width: `${completed ? 100 : progress}%`, background: lesson.subjectColor }} /></div></div></header>
-    <section className="learning-content">{lesson.blocks.slice(0, visibleCount).map((block) => <LearningBlock key={block.id} block={block} />)}{lesson.blocks.length === 0 && <div className="card empty"><h2>В уроке пока нет материалов</h2><p className="muted">Попроси родителя добавить содержание.</p></div>}{completed && lesson.quizzes.map((quiz) => <StudentQuizCard key={quiz.id} quiz={quiz} />)}{completed&&lesson.homeworks.map((homework)=><HomeworkCard key={homework.id} homework={homework} refresh={async()=>{await client.invalidateQueries({queryKey:['student-lesson',lessonId]})}}/>)}</section>
+    <section className="learning-content">{lesson.blocks.slice(0, visibleCount).map((block) => <LearningBlock key={block.id} block={block} />)}{lesson.blocks.length === 0 && <div className="card empty"><h2>В уроке пока нет материалов</h2><p className="muted">Попроси родителя добавить содержание.</p></div>}<AiHint lessonId={lessonId}/>{completed && lesson.quizzes.map((quiz) => <StudentQuizCard key={quiz.id} quiz={quiz} />)}{completed&&lesson.homeworks.map((homework)=><HomeworkCard key={homework.id} homework={homework} refresh={async()=>{await client.invalidateQueries({queryKey:['student-lesson',lessonId]})}}/>)}</section>
     {lesson.blocks.length > 0 && <footer className="lesson-next">{completed ? <><div className="completion-card"><span aria-hidden="true">✓</span><div><h2>Урок пройден</h2><p>Отличная работа! Результат сохранён.</p></div><NavLink className="button-link" to="/today">К списку уроков</NavLink></div><form className="card reflection-card" onSubmit={(event) => { event.preventDefault(); reflection.mutate() }}><div><h2>Как тебе было?</h2><p className="muted">Это не оценка — ответ поможет подобрать следующий урок.</p></div><div className="feeling-options">{([['easy','Легко'],['good','Получилось'],['hard','Трудно'],['need_help','Нужна помощь']] as const).map(([value,label]) => <button type="button" className={feeling === value ? 'feeling-selected' : 'button-ghost'} key={value} onClick={() => setFeeling(value)}>{label}</button>)}</div><textarea maxLength={500} rows={2} placeholder="Можно коротко написать, что было сложно" value={comment} onChange={(event) => setComment(event.target.value)} /><button disabled={!feeling || reflection.isPending}>{lesson.reflection || reflection.isSuccess ? 'Обновить ответ' : 'Сохранить ответ'}</button>{lesson.reflection && !reflection.isSuccess && <p className="saved-note">Ответ уже сохранён: {lesson.reflection.feeling === 'need_help' ? 'нужна помощь' : 'спасибо!'}</p>}{reflection.isSuccess && <p className="saved-note">Спасибо, ответ сохранён.</p>}{reflection.error && <p className="form-error">{reflection.error.message}</p>}</form></> : <button disabled={save.isPending} onClick={next}>{visibleCount + 1 >= lesson.blocks.length ? 'Завершить урок' : 'Дальше →'}</button>}{save.error && <p className="form-error" role="alert">{save.error.message}</p>}</footer>}
   </div>
 }

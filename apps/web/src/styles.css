@@ -77,6 +77,11 @@ h2 { margin-bottom: 4px; }
 .diagnostic-option.selected { border-color: #2563eb; background: #eff6ff; }
 .diagnostic-result { display: flex; align-items: center; gap: 24px; max-width: 760px; border-left: 5px solid #2563eb; }
 .diagnostic-score { flex: 0 0 auto; font-size: 2rem; font-weight: 800; color: #2563eb; }
+.ai-hint { display: grid; gap: 10px; border-color: #c4b5fd; background: #faf8ff; }
+.ai-hint-answer { padding: 14px; border-radius: 12px; background: #ede9fe; color: #4c1d95; }
+.ai-drafts { display: grid; gap: 14px; margin-top: 20px; border-color: #c4b5fd; }
+.ai-draft { padding: 14px; border: 1px solid var(--border); border-radius: 12px; }
+.correct-draft-option { color: #05603a; font-weight: 700; }
 .compact-form { max-width: 440px; }
 .subject-toolbar { margin-bottom: 22px; display: grid; grid-template-columns: 1.2fr 1fr 1fr; align-items: end; gap: 18px; }
 .subject-toolbar form { display: grid; grid-template-columns: 1fr auto; gap: 8px; }

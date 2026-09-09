@@ -120,6 +120,9 @@ PIN принимается только как строка из 4–8 цифр 
 | PATCH | `/review-schedules/{id}` | перенести дату повторения родителем |
 | GET, PUT | `/students/{id}/topics/{topicId}/review-questions` | посмотреть доступные вопросы и выбрать 1–3 вопроса контрольного повторения |
 | POST | `/student/lessons/{id}/reflection` | сохранить самооценку завершённого урока |
+| POST | `/student/lessons/{id}/ai-hints` | получить наводящую подсказку без готового ответа; запрос и ответ фиксируются сервером |
+| GET, POST | `/lessons/{id}/ai-quiz-drafts` | посмотреть или создать родительский AI-черновик теста |
+| POST | `/ai-quiz-drafts/{id}/approve` | утвердить черновик и только после этого добавить тест в урок |
 | GET | `/students/{id}/progress-report` | родительский отчёт по назначениям и обратной связи |
 | GET, POST | `/lessons/{id}/quizzes` | список и создание тестов урока |
 | DELETE | `/quizzes/{id}` | удалить тест |

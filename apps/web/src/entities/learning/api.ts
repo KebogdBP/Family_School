@@ -47,3 +47,4 @@ export const submitQuizAttempt = (quizId: string, answer: QuizAnswer) => api<{ a
 export const saveHomeworkSubmission = (homeworkId: string, responseText: string, submit: boolean) => api<{ submission: StudentHomework['submission'] }>(`/student/homeworks/${homeworkId}/submission`, { method: 'PUT', body: JSON.stringify({ responseText, submit }) })
 export const uploadHomeworkFile = (homeworkId: string, file: File) => { const body=new FormData();body.set('file',file);return api<{file:SubmissionFile}>(`/student/homeworks/${homeworkId}/files`,{method:'POST',body}) }
 export const deleteHomeworkFile = (fileId: string) => api<{status:string}>(`/submission-files/${fileId}`,{method:'DELETE'})
+export const requestAiHint = (lessonId: string, question: string) => api<{ hint: string; provider: string; safety: 'no_direct_answer' }>(`/student/lessons/${lessonId}/ai-hints`, { method: 'POST', body: JSON.stringify({ question }) })
