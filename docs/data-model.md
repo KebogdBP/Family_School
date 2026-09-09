@@ -13,6 +13,7 @@ students ──< curricula ──< curriculum_subjects ──< sections ──< 
 topics ──< mastery_states ──< mastery_evidence
 topics ──< review_schedule ──< review_attempts
 topics ──< review_question_settings >── quiz_questions
+students ──< pilot_content_installs
 ```
 
 ## Инварианты
@@ -29,5 +30,6 @@ topics ──< review_question_settings >── quiz_questions
 - пользовательский набор содержит от одного до трёх вопросов и сохраняет заданный родителем порядок.
 - семейный JSON-экспорт строится только по `family_id` из родительской сессии и использует явный список разрешённых полей;
 - `password_hash`, `pin_hash`, сессии, ограничения входа, внутренние имена и бинарное содержимое файлов не экспортируются.
+- `pilot_content_installs` фиксирует версию установленного стартового маршрута и не позволяет повторному запуску создавать дубликаты.
 
 Полная схема последовательно создаётся SQL-миграциями из `apps/api/migrations`.

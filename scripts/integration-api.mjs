@@ -266,10 +266,21 @@ const weeklyDigestReport = await request(`/students/${sara.student.id}/progress-
 assert(weeklyDigestReport.weeklyDigest.planned === 1 && weeklyDigestReport.weeklyDigest.completionPercent === 100, 'Weekly completion summary is incorrect')
 assert(weeklyDigestReport.weeklyDigest.masteredTopics.length === 1 && weeklyDigestReport.weeklyDigest.completedReviews.length === 1, 'Weekly mastery and review results are missing')
 assert(weeklyDigestReport.weeklyDigest.difficulties.some((item) => item.reason.includes('попросил помощи')), 'Weekly difficulty signal is missing')
+const davidRoute = await request(`/students/${david.student.id}/pilot-content/david-fractions`, { method: 'POST' })
+assert(davidRoute.installed && davidRoute.counts.topics === 4 && davidRoute.counts.lessons === 7 && davidRoute.counts.competencies === 10, 'David pilot route is incomplete')
+const repeatedDavidRoute = await request(`/students/${david.student.id}/pilot-content/david-fractions`, { method: 'POST' })
+assert(!repeatedDavidRoute.installed && repeatedDavidRoute.alreadyInstalled && repeatedDavidRoute.curriculumId === davidRoute.curriculumId, 'David pilot route is not idempotent')
+const davidTree = await request(`/curricula/${davidRoute.curriculumId}`)
+assert(davidTree.curriculum.subjects[0].sections[0].topics.length === 4, 'David curriculum tree is incomplete')
 const familyExport = await request('/family/export')
 assert(familyExport.schemaVersion === 1 && familyExport.data.students.length === 2, 'Family export is incomplete')
 assert(familyExport.data.homeworkSubmissions.length === 1 && familyExport.data.submissionFiles[0].original_name === 'тетрадь.png', 'Learning records are missing from family export')
+assert(familyExport.data.pilotContentInstalls.length === 1, 'Pilot content installation marker is missing from export')
 const serializedExport = JSON.stringify(familyExport)
 for (const forbidden of ['password_hash', 'pin_hash', 'token_hash', 'storage_name']) assert(!serializedExport.includes(forbidden), `Sensitive field leaked into export: ${forbidden}`)
 
-console.log('Integration OK: custom review quiz is assembled, scored and closes the mastery schedule')
+await request('/auth/logout', { method: 'POST' }); cookie = ''
+await request('/auth/student/login', { method: 'POST', body: JSON.stringify({ studentId: david.student.id, pin: '1004' }) })
+assert((await request('/student/lessons')).lessons.length === 7, 'David cannot access all lessons from his pilot route')
+
+console.log('Integration OK: learning cycle and repeatable David pilot route are complete')

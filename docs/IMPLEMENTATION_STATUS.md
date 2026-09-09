@@ -43,7 +43,8 @@
 - [x] database-level family isolation for curriculum relations
 - [x] CRUD API for subjects, sections, topics and lessons
 - [x] curriculum creation, subject assignment and ordered curriculum tree
-- [ ] seed routes «Дроби» for Sara and David
+- [x] idempotent grade 4 fractions route for David: 4 topics, 7 lessons, 10 linked competencies, 7 quizzes and 4 open works
+- [ ] seed route «Обыкновенные дроби» for Sara
 - [x] parent curriculum page for each student
 - [x] create curriculum and assign existing or custom subjects
 - [x] nested section, topic and lesson creation UI
@@ -99,7 +100,7 @@
 
 Реализация сохраняет утверждённый стек и продуктовые принципы, но часть поздних функций была сделана до обязательного пилотного контента. До продолжения фазы качества нужно закрыть следующие продуктовые пробелы:
 
-- [ ] готовый маршрут «Дроби» для Давида, 4 класс;
+- [x] готовый маршрут «Дроби» для Давида, 4 класс;
 - [ ] готовый маршрут «Обыкновенные дроби» для Сары, 6 класс;
 - [ ] входная мини-диагностика и выбор первого шага;
 - [ ] проверка полного учебного цикла для обоих профилей;
@@ -113,4 +114,4 @@
 
 ## Следующая задача
 
-Создать повторяемый seed-маршрут «Дробь как часть целого и простые действия» для Давида, 4 класс.
+Создать повторяемый seed-маршрут «Обыкновенные дроби» для Сары, 6 класс.

@@ -62,3 +62,5 @@ export const deleteQuiz = (quizId: string) => api<{ status: string }>(`/quizzes/
 export const getLessonHomeworks = (lessonId: string) => api<{ homeworks: Homework[] }>(`/lessons/${lessonId}/homeworks`)
 export const createHomework = (lessonId: string, input: { title: string; instructions: string; position: number }) => api<{ homework: { id: string } }>(`/lessons/${lessonId}/homeworks`, { method: 'POST', body: JSON.stringify(input) })
 export const deleteHomework = (id: string) => api<{ status: string }>(`/homeworks/${id}`, { method: 'DELETE' })
+export type PilotContentResult = { installed: boolean; alreadyInstalled: boolean; curriculumId: string; routeCode: string; counts?: { topics: number; lessons: number; competencies: number; quizzes: number; homeworks: number } }
+export const installDavidFractions = (studentId: string) => api<PilotContentResult>(`/students/${studentId}/pilot-content/david-fractions`, { method: 'POST' })

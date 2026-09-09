@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { NavLink, useParams } from 'react-router-dom'
 import {
   attachSubject, createCurriculum, createLesson, createSection, createSubject, createTopic,
-  deleteCurriculumNode, getCurricula, getCurriculum, getSubjects, updateCurriculumNode, updateMasterySettings,
+  deleteCurriculumNode, getCurricula, getCurriculum, getSubjects, installDavidFractions, updateCurriculumNode, updateMasterySettings,
   type AssignedSubject, type CurriculumNodeType, type CurriculumTree,
 } from '@/entities/curriculum/api'
 import { getStudents } from '@/entities/student/api'
@@ -99,10 +99,12 @@ function ProgramTree({ tree }: { tree: CurriculumTree }) {
 
 export function CurriculumPage() {
   const { studentId = '' } = useParams()
+  const client = useQueryClient()
   const students = useQuery({ queryKey: ['students'], queryFn: getStudents })
   const curricula = useQuery({ queryKey: ['curricula', studentId], queryFn: () => getCurricula(studentId), enabled: Boolean(studentId) })
   const student = students.data?.students.find((item) => item.id === studentId)
   const curriculumId = curricula.data?.curricula[0]?.id
   const tree = useQuery({ queryKey: ['curriculum', curriculumId], queryFn: () => getCurriculum(curriculumId!), enabled: Boolean(curriculumId) })
-  return <><header className="page-header"><p className="eyebrow">Учебная программа</p><div className="header-row"><div><h1>{student ? `Программа: ${student.displayName}` : 'Программа ученика'}</h1><p className="muted">Предметы, разделы, темы и уроки в правильном порядке.</p></div><NavLink className="button-link button-ghost" to="/children">← К ученикам</NavLink></div></header><ErrorText error={students.error ?? curricula.error ?? tree.error} />{students.isLoading || curricula.isLoading ? <p>Загружаем программу…</p> : !student ? <div className="card empty"><h2>Ученик не найден</h2></div> : !curriculumId ? <CurriculumCreator studentId={student.id} grade={student.grade} /> : tree.data ? <><SubjectToolbar tree={tree.data.curriculum} /><ProgramTree tree={tree.data.curriculum} /></> : <p>Загружаем содержание…</p>}</>
+  const seed = useMutation({ mutationFn: () => installDavidFractions(studentId), onSuccess: async (result) => { await Promise.all([client.invalidateQueries({ queryKey: ['curricula', studentId] }), client.invalidateQueries({ queryKey: ['curriculum', result.curriculumId] }), client.invalidateQueries({ queryKey: ['subjects'] })]) } })
+  return <><header className="page-header"><p className="eyebrow">Учебная программа</p><div className="header-row"><div><h1>{student ? `Программа: ${student.displayName}` : 'Программа ученика'}</h1><p className="muted">Предметы, разделы, темы и уроки в правильном порядке.</p></div><div className="header-actions">{student?.grade === 4 && <button disabled={seed.isPending || Boolean(seed.data)} onClick={() => seed.mutate()}>{seed.isPending ? 'Устанавливаем…' : seed.data ? 'Маршрут установлен' : 'Добавить маршрут «Дроби»'}</button>}<NavLink className="button-link button-ghost" to="/children">← К ученикам</NavLink></div></div></header><ErrorText error={students.error ?? curricula.error ?? tree.error ?? seed.error} />{seed.data?.installed && <section className="card seed-success" role="status"><strong>Маршрут для 4 класса готов.</strong><span>{seed.data.counts?.topics} темы · {seed.data.counts?.lessons} уроков · {seed.data.counts?.competencies} навыков</span></section>}{students.isLoading || curricula.isLoading ? <p>Загружаем программу…</p> : !student ? <div className="card empty"><h2>Ученик не найден</h2></div> : !curriculumId ? <CurriculumCreator studentId={student.id} grade={student.grade} /> : tree.data ? <><SubjectToolbar tree={tree.data.curriculum} /><ProgramTree tree={tree.data.curriculum} /></> : <p>Загружаем содержание…</p>}</>
 }

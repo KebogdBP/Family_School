@@ -67,6 +67,7 @@ h2 { margin-bottom: 4px; }
 .empty .badge { margin: 0 auto 14px; }
 .splash { min-height: 100vh; display: grid; align-content: center; justify-items: center; }
 .program-empty { max-width: 680px; }
+.seed-success { display: flex; justify-content: space-between; gap: 14px; margin-bottom: 18px; color: #05603a; border-color: #75e0a7; background: #ecfdf3; }
 .compact-form { max-width: 440px; }
 .subject-toolbar { margin-bottom: 22px; display: grid; grid-template-columns: 1.2fr 1fr 1fr; align-items: end; gap: 18px; }
 .subject-toolbar form { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
