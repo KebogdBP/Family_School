@@ -63,7 +63,10 @@
 - [x] migration 005 for student reflections
 - [x] post-lesson self-assessment UI and API
 - [x] parent progress report with help signals
+- [x] migration 006 for quiz questions, attempts and answers
+- [x] parent single-question quiz constructor
+- [x] student quiz flow with server-side scoring and answer privacy
 
 ## Следующая задача
 
-Добавить практические задания и первый тип автоматически проверяемого теста.
+Добавить открытые домашние задания с текстовым ответом и проверкой родителем.

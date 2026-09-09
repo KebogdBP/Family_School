@@ -77,6 +77,11 @@ await request(`/lessons/${lesson.lesson.id}/blocks`, {
 })
 const content = await request(`/lessons/${lesson.lesson.id}/content`)
 assert(content.lesson.blocks.length === 2, 'Lesson blocks are incomplete')
+const quiz = await request(`/lessons/${lesson.lesson.id}/quizzes`, {
+  method: 'POST', body: JSON.stringify({ title: 'Проверка дробей', prompt: 'Какая дробь равна 1/2?', options: ['2/4', '1/3', '3/4'], correctOption: 0, explanation: '2/4 сокращается до 1/2.', position: 0 }),
+})
+const parentQuizzes = await request(`/lessons/${lesson.lesson.id}/quizzes`)
+assert(parentQuizzes.quizzes.length === 1, 'Parent quiz was not created')
 const tree = await request(`/curricula/${curriculum.curriculum.id}`)
 assert(tree.curriculum.subjects[0].sections[0].topics[0].lessons.length === 1, 'Curriculum tree is incomplete')
 
@@ -109,6 +114,11 @@ assert(todayLessons.lessons.length === 1 && todayLessons.lessons[0].isRequired, 
 assert(studentLessons.lessons[0].progress.status === 'not_started', 'New lesson must not be started')
 const studentLesson = await request(`/student/lessons/${lesson.lesson.id}`)
 assert(studentLesson.lesson.blocks.length === 2, 'Student lesson must contain ordered blocks')
+assert(studentLesson.lesson.quizzes.length === 1 && studentLesson.lesson.quizzes[0].question.correctOption === undefined, 'Quiz answer leaked to student')
+const wrongAttempt = await request(`/student/quizzes/${quiz.quiz.id}/attempts`, { method: 'POST', body: JSON.stringify({ selectedOption: 1 }) })
+assert(wrongAttempt.attempt.score === 0 && !wrongAttempt.attempt.correct, 'Wrong quiz answer was accepted')
+const correctAttempt = await request(`/student/quizzes/${quiz.quiz.id}/attempts`, { method: 'POST', body: JSON.stringify({ selectedOption: 0 }) })
+assert(correctAttempt.attempt.score === 100 && correctAttempt.attempt.correct, 'Correct quiz answer was rejected')
 await request(`/student/lessons/${lesson.lesson.id}/progress`, {
   method: 'PATCH', body: JSON.stringify({ lastBlockPosition: 1, completed: false }),
 })
@@ -141,4 +151,4 @@ await request('/auth/parent/login', {
 const report = await request(`/students/${sara.student.id}/progress-report`)
 assert(report.summary.completed === 1 && report.summary.needsHelp === 1, 'Parent report is incorrect')
 
-console.log('Integration OK: plans, progress, student reflection and parent report are isolated and persistent')
+console.log('Integration OK: plans, progress, reflections, quiz scoring and parent report are isolated and persistent')

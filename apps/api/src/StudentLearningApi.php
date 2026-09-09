@@ -95,7 +95,10 @@ final class StudentLearningApi
         $reflection = $db->prepare('SELECT feeling, comment FROM student_reflections WHERE student_id=:student_id AND lesson_id=:lesson_id');
         $reflection->execute(['student_id' => $studentId, 'lesson_id' => $lessonId]);
         $savedReflection = $reflection->fetch();
-        Http::json(['lesson' => self::lessonSummary($lesson) + ['blocks' => $lesson['blocks'], 'reflection' => $savedReflection ? ['feeling' => $savedReflection['feeling'], 'comment' => $savedReflection['comment']] : null]]);
+        $quizzes = $db->prepare('SELECT a.id,a.title,q.id AS question_id,q.prompt,q.options_json FROM activities a JOIN quiz_questions q ON q.activity_id=a.id WHERE a.lesson_id=:lesson_id AND a.family_id=:family_id AND a.activity_type=\'quiz\' AND a.deleted_at IS NULL ORDER BY a.position,a.created_at');
+        $quizzes->execute(['lesson_id'=>$lessonId,'family_id'=>$familyId]);
+        $studentQuizzes=array_map(static fn(array $row):array=>['id'=>$row['id'],'title'=>$row['title'],'question'=>['id'=>$row['question_id'],'prompt'=>$row['prompt'],'options'=>json_decode((string)$row['options_json'],true,flags:JSON_THROW_ON_ERROR)]],$quizzes->fetchAll());
+        Http::json(['lesson' => self::lessonSummary($lesson) + ['blocks' => $lesson['blocks'], 'quizzes'=>$studentQuizzes, 'reflection' => $savedReflection ? ['feeling' => $savedReflection['feeling'], 'comment' => $savedReflection['comment']] : null]]);
     }
 
     private static function saveProgress(PDO $db, string $familyId, string $studentId, string $lessonId): never

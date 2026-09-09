@@ -10,6 +10,7 @@ export type Subject = { id: string; title: string; description: string | null; c
 export type BlockType = 'markdown' | 'example' | 'link' | 'video' | 'image'
 export type LessonBlock = { id: string; blockType: BlockType; content: { text?: string; url?: string; caption?: string }; position: number }
 export type LessonContent = { id: string; title: string; summary: string | null; estimatedMinutes: number | null; status: 'draft' | 'published'; blocks: LessonBlock[] }
+export type ParentQuiz = { id: string; title: string; question: { id: string; prompt: string; options: string[]; correctOption: number; explanation: string | null } }
 
 export const getSubjects = () => api<{ subjects: Subject[] }>('/subjects')
 export const createSubject = (input: { title: string; color?: string }) =>
@@ -50,3 +51,6 @@ export const updateLessonBlock = (blockId: string, input: { blockType: BlockType
 
 export const deleteLessonBlock = (blockId: string) =>
   api<{ status: string }>(`/content-blocks/${blockId}`, { method: 'DELETE' })
+export const getLessonQuizzes = (lessonId: string) => api<{ quizzes: ParentQuiz[] }>(`/lessons/${lessonId}/quizzes`)
+export const createQuiz = (lessonId: string, input: { title: string; prompt: string; options: string[]; correctOption: number; explanation: string; position: number }) => api<{ quiz: { id: string } }>(`/lessons/${lessonId}/quizzes`, { method: 'POST', body: JSON.stringify(input) })
+export const deleteQuiz = (quizId: string) => api<{ status: string }>(`/quizzes/${quizId}`, { method: 'DELETE' })

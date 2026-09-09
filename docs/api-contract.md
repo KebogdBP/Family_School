@@ -107,6 +107,9 @@ PIN принимается только как строка из 4–8 цифр 
 | GET | `/student/today` | назначенные текущему ученику уроки на сегодня |
 | POST | `/student/lessons/{id}/reflection` | сохранить самооценку завершённого урока |
 | GET | `/students/{id}/progress-report` | родительский отчёт по назначениям и обратной связи |
+| GET, POST | `/lessons/{id}/quizzes` | список и создание тестов урока |
+| DELETE | `/quizzes/{id}` | удалить тест |
+| POST | `/student/quizzes/{id}/attempts` | проверить ответ и сохранить попытку |
 | PATCH | `/content-blocks/{id}` | изменить содержимое, тип или позицию |
 | DELETE | `/content-blocks/{id}` | удалить блок |
 
