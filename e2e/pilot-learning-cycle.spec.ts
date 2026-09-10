@@ -10,6 +10,14 @@ const expectAccessible = async (page: Page) => {
   const result = await new AxeBuilder({ page }).analyze()
   expect(result.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([])
 }
+const expectNoPageOverflow = async (page: Page) => {
+  const dimensions = await page.evaluate(() => ({
+    width: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    offenders: [...document.querySelectorAll<HTMLElement>('body *')].filter((element) => element.getBoundingClientRect().right > document.documentElement.clientWidth + 1).slice(0, 5).map((element) => ({ tag: element.tagName, className: element.className, right: Math.round(element.getBoundingClientRect().right), scrollWidth: element.scrollWidth })),
+  }))
+  expect(dimensions.scrollWidth, `Page overflows horizontally: ${JSON.stringify(dimensions)}`).toBeLessThanOrEqual(dimensions.width + 1)
+}
 
 async function parentLogin(page: Page) {
   await page.goto('/login')
@@ -28,11 +36,14 @@ async function childLogin(page: Page, child: Child) {
 }
 
 async function completeChildCycle(page: Page, child: Child) {
+  await page.setViewportSize(child.name === 'Давид' ? { width: 390, height: 844 } : { width: 768, height: 1024 })
   await childLogin(page, child)
   await expectAccessible(page)
+  await expectNoPageOverflow(page)
   await page.getByRole('link', { name: 'Диагностика' }).click()
   await expect(page.getByRole('heading', { name: /стартовая проверка/i })).toBeVisible()
   await expectAccessible(page)
+  await expectNoPageOverflow(page)
   for (const question of await page.locator('fieldset').all()) await question.locator('label').first().click()
   await page.getByRole('button', { name: 'Завершить диагностику' }).click()
   await expect(page.getByText('Рекомендуемый первый шаг')).toBeVisible()
@@ -41,6 +52,7 @@ async function completeChildCycle(page: Page, child: Child) {
   const lesson = page.locator('.student-lesson-card').filter({ hasText: child.lessonTitle })
   await lesson.getByRole('link').click()
   await expect(page.getByRole('heading', { name: child.lessonTitle })).toBeVisible()
+  await expectNoPageOverflow(page)
   while (await page.getByRole('button', { name: /^(Дальше →|Завершить урок)$/ }).count()) {
     await page.getByRole('button', { name: /^(Дальше →|Завершить урок)$/ }).click()
   }
@@ -99,16 +111,22 @@ test.beforeAll(async () => {
 test.afterAll(async () => { await api?.dispose() })
 
 test('Сара и Давид проходят полный учебный цикл, а родитель утверждает план', async ({ page }) => {
+  test.setTimeout(60_000)
+  await page.setViewportSize({ width: 768, height: 1024 })
   await parentLogin(page)
+  await expectNoPageOverflow(page)
   await page.goto('/несуществующая-страница')
   await expect(page.getByRole('heading', { name: 'Такой страницы нет' })).toBeVisible()
   await expectAccessible(page)
   await page.getByRole('link', { name: 'Вернуться в кабинет' }).click()
   const davidCard = page.locator('.child-card').filter({ hasText: 'Давид' })
   await davidCard.getByRole('link', { name: 'План недели' }).click()
+  await expectNoPageOverflow(page)
   await page.getByRole('button', { name: 'Позже →' }).click()
   await page.getByRole('button', { name: 'Собрать черновик' }).click()
   await expect(page.getByText('Черновик · можно изменить')).toBeVisible()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expectNoPageOverflow(page)
   await page.getByRole('link', { name: 'К ученикам' }).click()
   for (const child of children) await completeChildCycle(page, child)
   const saraCard = page.locator('.child-card').filter({ hasText: 'Сара' })
