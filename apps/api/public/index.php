@@ -39,18 +39,44 @@ try {
         $method === 'POST' && $path === '/api/v1/auth/logout' => logout($db),
         $method === 'GET' && $path === '/api/v1/me' => currentPrincipal($db),
         $method === 'GET' && $path === '/api/v1/family/export' => FamilyExportApi::export($db),
-        $method === 'POST' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/pilot-content/david-fractions$#',$path,$matches)===1 => PilotContentApi::installDavidFractions($db,$matches[1]),
-        $method === 'POST' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/pilot-content/sara-fractions$#',$path,$matches)===1 => PilotContentApi::installSaraFractions($db,$matches[1]),
+        $method === 'POST' &&
+            preg_match('#^/api/v1/students/([0-9a-f-]{36})/pilot-content/david-fractions$#', $path, $matches) === 1
+            => PilotContentApi::installDavidFractions($db, $matches[1]),
+        $method === 'POST' &&
+            preg_match('#^/api/v1/students/([0-9a-f-]{36})/pilot-content/sara-fractions$#', $path, $matches) === 1
+            => PilotContentApi::installSaraFractions($db, $matches[1]),
         $method === 'GET' && $path === '/api/v1/students' => listStudents($db),
         $method === 'POST' && $path === '/api/v1/students' => createStudent($db),
-        $method === 'PATCH' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/pin$#', $path, $matches) === 1 => updateStudentPin($db, $matches[1]),
-        $method === 'DELETE' && preg_match('#^/api/v1/students/([0-9a-f-]{36})$#', $path, $matches) === 1 => deleteStudent($db, $matches[1]),
-        preg_match('#^/api/v1/(student/lessons/[0-9a-f-]{36}/ai-hints|lessons/[0-9a-f-]{36}/ai-quiz-drafts|ai-quiz-drafts/[0-9a-f-]{36}/approve)$#',$path)===1 => AiApi::dispatch($db,$method,$path),
-        preg_match('#^/api/v1/(lessons/[0-9a-f-]{36}/quizzes|quizzes/[0-9a-f-]{36}|student/quizzes/[0-9a-f-]{36}/attempts)$#', $path) === 1 => QuizApi::dispatch($db, $method, $path),
-        preg_match('#^/api/v1/student/reviews/[0-9a-f-]{36}$#', $path) === 1 => ReviewApi::dispatch($db, $method, $path),
-        preg_match('#^/api/v1/(lessons/[0-9a-f-]{36}/homeworks|homeworks/[0-9a-f-]{36}|student/homeworks/[0-9a-f-]{36}/(submission|files)|submission-files/[0-9a-f-]{36}|review-submissions|submissions/[0-9a-f-]{36}/reviews)$#', $path) === 1 => HomeworkApi::dispatch($db, $method, $path),
+        $method === 'PATCH' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/pin$#', $path, $matches) === 1
+            => updateStudentPin($db, $matches[1]),
+        $method === 'DELETE' && preg_match('#^/api/v1/students/([0-9a-f-]{36})$#', $path, $matches) === 1
+            => deleteStudent($db, $matches[1]),
+        preg_match(
+            '#^/api/v1/(student/lessons/[0-9a-f-]{36}/ai-hints|lessons/[0-9a-f-]{36}/ai-quiz-drafts|ai-quiz-drafts/[0-9a-f-]{36}/approve)$#',
+            $path,
+        ) === 1
+            => AiApi::dispatch($db, $method, $path),
+        preg_match(
+            '#^/api/v1/(lessons/[0-9a-f-]{36}/quizzes|quizzes/[0-9a-f-]{36}|student/quizzes/[0-9a-f-]{36}/attempts)$#',
+            $path,
+        ) === 1
+            => QuizApi::dispatch($db, $method, $path),
+        preg_match('#^/api/v1/student/reviews/[0-9a-f-]{36}$#', $path) === 1 => ReviewApi::dispatch(
+            $db,
+            $method,
+            $path,
+        ),
+        preg_match(
+            '#^/api/v1/(lessons/[0-9a-f-]{36}/homeworks|homeworks/[0-9a-f-]{36}|student/homeworks/[0-9a-f-]{36}/(submission|files)|submission-files/[0-9a-f-]{36}|review-submissions|submissions/[0-9a-f-]{36}/reviews)$#',
+            $path,
+        ) === 1
+            => HomeworkApi::dispatch($db, $method, $path),
         str_starts_with($path, '/api/v1/student/') => StudentLearningApi::dispatch($db, $method, $path),
-        preg_match('#^/api/v1/(students/[0-9a-f-]{36}/(weekly-plan|plan-draft|plan-items|progress-report|topics/[0-9a-f-]{36}/review-questions)|plan-items/[0-9a-f-]{36}|review-schedules/[0-9a-f-]{36})$#', $path) === 1 => PlanningApi::dispatch($db, $method, $path),
+        preg_match(
+            '#^/api/v1/(students/[0-9a-f-]{36}/(weekly-plan|plan-draft|plan-items|progress-report|topics/[0-9a-f-]{36}/review-questions)|plan-items/[0-9a-f-]{36}|review-schedules/[0-9a-f-]{36})$#',
+            $path,
+        ) === 1
+            => PlanningApi::dispatch($db, $method, $path),
         default => CurriculumApi::dispatch($db, $method, $path),
     };
 } catch (Throwable $error) {
@@ -61,11 +87,16 @@ try {
         'status' => 500,
         'phase' => 'dispatch',
     ]);
-    Http::json(['error' => [
-        'code' => 'internal_error',
-        'message' => 'Внутренняя ошибка сервера',
-        'requestId' => Http::requestId(),
-    ]], 500);
+    Http::json(
+        [
+            'error' => [
+                'code' => 'internal_error',
+                'message' => 'Внутренняя ошибка сервера',
+                'requestId' => Http::requestId(),
+            ],
+        ],
+        500,
+    );
 }
 
 function setupFamily(PDO $db): never
@@ -94,11 +125,13 @@ function setupFamily(PDO $db): never
     $userId = Uuid::v4();
     $db->beginTransaction();
     try {
-        $db->prepare('INSERT INTO families (id, name) VALUES (:id, :name)')
-            ->execute(['id' => $familyId, 'name' => $familyName]);
+        $db->prepare('INSERT INTO families (id, name) VALUES (:id, :name)')->execute([
+            'id' => $familyId,
+            'name' => $familyName,
+        ]);
         $db->prepare(
             'INSERT INTO users (id, family_id, email, password_hash, display_name)
-             VALUES (:id, :family_id, :email, :password_hash, :display_name)'
+             VALUES (:id, :family_id, :email, :password_hash, :display_name)',
         )->execute([
             'id' => $userId,
             'family_id' => $familyId,
@@ -127,7 +160,7 @@ function loginParent(PDO $db): never
 
     $statement = $db->prepare(
         'SELECT id, family_id, display_name, password_hash FROM users
-         WHERE email = :email AND deleted_at IS NULL LIMIT 1'
+         WHERE email = :email AND deleted_at IS NULL LIMIT 1',
     );
     $statement->execute(['email' => $email]);
     $user = $statement->fetch();
@@ -139,11 +172,13 @@ function loginParent(PDO $db): never
     RateLimiter::clear($db, $identity);
     Auth::issueSession($db, $user['family_id'], 'parent', $user['id'], null);
     Audit::record($db, $user['family_id'], 'parent', $user['id'], 'auth.parent_login');
-    Http::json(['user' => [
-        'id' => $user['id'],
-        'role' => 'parent',
-        'displayName' => $user['display_name'],
-    ]]);
+    Http::json([
+        'user' => [
+            'id' => $user['id'],
+            'role' => 'parent',
+            'displayName' => $user['display_name'],
+        ],
+    ]);
 }
 
 function loginStudent(PDO $db): never
@@ -156,7 +191,7 @@ function loginStudent(PDO $db): never
 
     $statement = $db->prepare(
         'SELECT id, family_id, display_name, grade, pin_hash FROM students
-         WHERE id = :id AND is_active = TRUE AND deleted_at IS NULL LIMIT 1'
+         WHERE id = :id AND is_active = TRUE AND deleted_at IS NULL LIMIT 1',
     );
     $statement->execute(['id' => $studentId]);
     $student = $statement->fetch();
@@ -168,12 +203,14 @@ function loginStudent(PDO $db): never
     RateLimiter::clear($db, $identity);
     Auth::issueSession($db, $student['family_id'], 'student', null, $student['id']);
     Audit::record($db, $student['family_id'], 'student', $student['id'], 'auth.student_login');
-    Http::json(['student' => [
-        'id' => $student['id'],
-        'role' => 'student',
-        'displayName' => $student['display_name'],
-        'grade' => (int) $student['grade'],
-    ]]);
+    Http::json([
+        'student' => [
+            'id' => $student['id'],
+            'role' => 'student',
+            'displayName' => $student['display_name'],
+            'grade' => (int) $student['grade'],
+        ],
+    ]);
 }
 
 function logout(PDO $db): never
@@ -193,7 +230,7 @@ function currentPrincipal(PDO $db): never
                 st.id AS student_id, st.display_name AS student_name, st.grade
          FROM sessions s LEFT JOIN users u ON u.id = s.user_id
          LEFT JOIN students st ON st.id = s.student_id
-         WHERE s.token_hash = :hash AND s.expires_at > NOW() LIMIT 1'
+         WHERE s.token_hash = :hash AND s.expires_at > NOW() LIMIT 1',
     );
     $statement->execute(['hash' => hash('sha256', $cookie)]);
     $principal = $statement->fetch();
@@ -201,13 +238,15 @@ function currentPrincipal(PDO $db): never
         Http::error('unauthorized', 'Сессия истекла', 401);
     }
     $isParent = $principal['role'] === 'parent';
-    Http::json(['principal' => [
-        'role' => $principal['role'],
-        'familyId' => $principal['family_id'],
-        'id' => $isParent ? $principal['user_id'] : $principal['student_id'],
-        'displayName' => $isParent ? $principal['user_name'] : $principal['student_name'],
-        'grade' => $isParent ? null : (int) $principal['grade'],
-    ]]);
+    Http::json([
+        'principal' => [
+            'role' => $principal['role'],
+            'familyId' => $principal['family_id'],
+            'id' => $isParent ? $principal['user_id'] : $principal['student_id'],
+            'displayName' => $isParent ? $principal['user_name'] : $principal['student_name'],
+            'grade' => $isParent ? null : (int) $principal['grade'],
+        ],
+    ]);
 }
 
 function listStudents(PDO $db): never
@@ -215,17 +254,20 @@ function listStudents(PDO $db): never
     $session = Auth::requireRole($db, 'parent');
     $statement = $db->prepare(
         'SELECT id, display_name, grade, age, avatar_color, is_active FROM students
-         WHERE family_id = :family_id AND deleted_at IS NULL ORDER BY created_at'
+         WHERE family_id = :family_id AND deleted_at IS NULL ORDER BY created_at',
     );
     $statement->execute(['family_id' => $session['family_id']]);
-    $students = array_map(static fn (array $student): array => [
-        'id' => $student['id'],
-        'displayName' => $student['display_name'],
-        'grade' => (int) $student['grade'],
-        'age' => $student['age'] === null ? null : (int) $student['age'],
-        'avatarColor' => $student['avatar_color'],
-        'isActive' => (bool) $student['is_active'],
-    ], $statement->fetchAll());
+    $students = array_map(
+        static fn(array $student): array => [
+            'id' => $student['id'],
+            'displayName' => $student['display_name'],
+            'grade' => (int) $student['grade'],
+            'age' => $student['age'] === null ? null : (int) $student['age'],
+            'avatarColor' => $student['avatar_color'],
+            'isActive' => (bool) $student['is_active'],
+        ],
+        $statement->fetchAll(),
+    );
     Http::json(['students' => $students]);
 }
 
@@ -252,7 +294,7 @@ function createStudent(PDO $db): never
     try {
         $db->prepare(
             'INSERT INTO students (id, family_id, display_name, grade, age, pin_hash)
-             VALUES (:id, :family_id, :display_name, :grade, :age, :pin_hash)'
+             VALUES (:id, :family_id, :display_name, :grade, :age, :pin_hash)',
         )->execute([
             'id' => $studentId,
             'family_id' => $session['family_id'],
@@ -261,9 +303,18 @@ function createStudent(PDO $db): never
             'age' => $age,
             'pin_hash' => password_hash($pin, PASSWORD_DEFAULT),
         ]);
-        $db->prepare('INSERT INTO parent_student_links (parent_id, student_id) VALUES (:parent_id, :student_id)')
-            ->execute(['parent_id' => $session['user_id'], 'student_id' => $studentId]);
-        Audit::record($db, $session['family_id'], 'parent', $session['user_id'], 'student.created', 'student', $studentId);
+        $db->prepare(
+            'INSERT INTO parent_student_links (parent_id, student_id) VALUES (:parent_id, :student_id)',
+        )->execute(['parent_id' => $session['user_id'], 'student_id' => $studentId]);
+        Audit::record(
+            $db,
+            $session['family_id'],
+            'parent',
+            $session['user_id'],
+            'student.created',
+            'student',
+            $studentId,
+        );
         $db->commit();
     } catch (Throwable $error) {
         $db->rollBack();
@@ -280,7 +331,7 @@ function updateStudentPin(PDO $db, string $studentId): never
         Http::error('invalid_pin', 'PIN должен содержать от 4 до 8 цифр', 422);
     }
     $statement = $db->prepare(
-        'UPDATE students SET pin_hash = :pin_hash WHERE id = :id AND family_id = :family_id AND deleted_at IS NULL'
+        'UPDATE students SET pin_hash = :pin_hash WHERE id = :id AND family_id = :family_id AND deleted_at IS NULL',
     );
     $statement->execute([
         'pin_hash' => password_hash($pin, PASSWORD_DEFAULT),
@@ -291,7 +342,15 @@ function updateStudentPin(PDO $db, string $studentId): never
         Http::error('not_found', 'Профиль ребёнка не найден', 404);
     }
     $db->prepare('DELETE FROM sessions WHERE student_id = :student_id')->execute(['student_id' => $studentId]);
-    Audit::record($db, $session['family_id'], 'parent', $session['user_id'], 'student.pin_changed', 'student', $studentId);
+    Audit::record(
+        $db,
+        $session['family_id'],
+        'parent',
+        $session['user_id'],
+        'student.pin_changed',
+        'student',
+        $studentId,
+    );
     Http::json(['status' => 'ok']);
 }
 
@@ -302,33 +361,54 @@ function deleteStudent(PDO $db, string $studentId): never
     $password = (string) ($body['password'] ?? '');
     $confirmation = trim((string) ($body['confirmation'] ?? ''));
 
-    $studentStatement = $db->prepare('SELECT display_name FROM students WHERE id=:id AND family_id=:family_id AND deleted_at IS NULL');
+    $studentStatement = $db->prepare(
+        'SELECT display_name FROM students WHERE id=:id AND family_id=:family_id AND deleted_at IS NULL',
+    );
     $studentStatement->execute(['id' => $studentId, 'family_id' => $session['family_id']]);
     $student = $studentStatement->fetch();
-    if (!$student) Http::error('not_found', 'Профиль ребёнка не найден', 404);
+    if (!$student) {
+        Http::error('not_found', 'Профиль ребёнка не найден', 404);
+    }
     if (!hash_equals((string) $student['display_name'], $confirmation)) {
         Http::error('confirmation_mismatch', 'Введите имя ребёнка точно так, как оно указано в профиле', 422);
     }
 
-    $parentStatement = $db->prepare('SELECT password_hash FROM users WHERE id=:id AND family_id=:family_id AND deleted_at IS NULL');
+    $parentStatement = $db->prepare(
+        'SELECT password_hash FROM users WHERE id=:id AND family_id=:family_id AND deleted_at IS NULL',
+    );
     $parentStatement->execute(['id' => $session['user_id'], 'family_id' => $session['family_id']]);
     $passwordHash = $parentStatement->fetchColumn();
     if (!is_string($passwordHash) || !password_verify($password, $passwordHash)) {
         Http::error('invalid_password', 'Неверный пароль родителя', 401);
     }
 
-    $files = $db->prepare('SELECT sf.storage_name FROM submission_files sf JOIN homework_submissions hs ON hs.id=sf.submission_id WHERE hs.student_id=:student_id AND hs.family_id=:family_id FOR UPDATE');
+    $files = $db->prepare(
+        'SELECT sf.storage_name FROM submission_files sf JOIN homework_submissions hs ON hs.id=sf.submission_id WHERE hs.student_id=:student_id AND hs.family_id=:family_id FOR UPDATE',
+    );
     $db->beginTransaction();
     try {
         $files->execute(['student_id' => $studentId, 'family_id' => $session['family_id']]);
         $storageNames = array_column($files->fetchAll(), 'storage_name');
-        Audit::record($db, $session['family_id'], 'parent', $session['user_id'], 'student.deleted', 'student', $studentId, ['deletedFileCount' => count($storageNames)]);
+        Audit::record(
+            $db,
+            $session['family_id'],
+            'parent',
+            $session['user_id'],
+            'student.deleted',
+            'student',
+            $studentId,
+            ['deletedFileCount' => count($storageNames)],
+        );
         $delete = $db->prepare('DELETE FROM students WHERE id=:id AND family_id=:family_id');
         $delete->execute(['id' => $studentId, 'family_id' => $session['family_id']]);
-        if ($delete->rowCount() !== 1) throw new RuntimeException('Профиль ребёнка не был удалён');
+        if ($delete->rowCount() !== 1) {
+            throw new RuntimeException('Профиль ребёнка не был удалён');
+        }
         $db->commit();
     } catch (Throwable $error) {
-        if ($db->inTransaction()) $db->rollBack();
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
         throw $error;
     }
 
@@ -336,8 +416,12 @@ function deleteStudent(PDO $db, string $studentId): never
     $failedFiles = 0;
     foreach ($storageNames as $storageName) {
         $path = $directory . '/' . basename((string) $storageName);
-        if (is_file($path) && !unlink($path)) $failedFiles++;
+        if (is_file($path) && !unlink($path)) {
+            $failedFiles++;
+        }
     }
-    if ($failedFiles > 0) error_log("Student deletion left {$failedFiles} private file(s) for retry");
+    if ($failedFiles > 0) {
+        error_log("Student deletion left {$failedFiles} private file(s) for retry");
+    }
     Http::json(['status' => 'deleted', 'deletedFiles' => count($storageNames), 'fileDeleteFailures' => $failedFiles]);
 }

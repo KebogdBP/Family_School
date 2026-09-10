@@ -13,12 +13,7 @@ export function getStudents() {
   return api<{ students: Student[] }>('/students')
 }
 
-export function createStudent(input: {
-  displayName: string
-  grade: number
-  age?: number
-  pin: string
-}) {
+export function createStudent(input: { displayName: string; grade: number; age?: number; pin: string }) {
   return api<{ student: Pick<Student, 'id' | 'displayName' | 'grade'> }>('/students', {
     method: 'POST',
     body: JSON.stringify(input),

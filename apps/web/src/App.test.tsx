@@ -4,10 +4,12 @@ import { App } from './App'
 
 describe('App', () => {
   it('shows parent login when there is no active session', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(
-      JSON.stringify({ error: { code: 'unauthorized', message: 'Требуется вход' } }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } },
-    ))
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ error: { code: 'unauthorized', message: 'Требуется вход' } }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
 
     render(
       <MemoryRouter initialEntries={['/login']}>

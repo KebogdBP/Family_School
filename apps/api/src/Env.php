@@ -43,4 +43,3 @@ final class Env
         throw new \RuntimeException("Missing required configuration: {$key}");
     }
 }
-

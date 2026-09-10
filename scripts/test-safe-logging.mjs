@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
 
-execFileSync('docker', ['compose', 'up', '-d', '--build', 'api'], { stdio: 'inherit' })
+execFileSync('docker', ['compose', 'up', '-d', 'api'], { stdio: 'inherit' })
 
 const secret = 'password=Secret-123 pin=1206 answer=3/4 file=Сара-домашняя-работа.pdf'
 const php = [

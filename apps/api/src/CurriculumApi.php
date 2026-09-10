@@ -17,10 +17,12 @@ final class CurriculumApi
         match (true) {
             $method === 'GET' && $path === '/api/v1/subjects' => self::listSubjects($db, $familyId),
             $method === 'POST' && $path === '/api/v1/subjects' => self::createSubject($db, $familyId, $actorId),
-            preg_match('#^/api/v1/(subjects|sections|topics|lessons)/([0-9a-f-]{36})$#', $path, $m) === 1
-                && $method === 'PATCH' => self::updateEntity($db, $familyId, $actorId, $m[1], $m[2]),
-            preg_match('#^/api/v1/(subjects|sections|topics|lessons)/([0-9a-f-]{36})$#', $path, $m) === 1
-                && $method === 'DELETE' => self::deleteEntity($db, $familyId, $actorId, $m[1], $m[2]),
+            preg_match('#^/api/v1/(subjects|sections|topics|lessons)/([0-9a-f-]{36})$#', $path, $m) === 1 &&
+                $method === 'PATCH'
+                => self::updateEntity($db, $familyId, $actorId, $m[1], $m[2]),
+            preg_match('#^/api/v1/(subjects|sections|topics|lessons)/([0-9a-f-]{36})$#', $path, $m) === 1 &&
+                $method === 'DELETE'
+                => self::deleteEntity($db, $familyId, $actorId, $m[1], $m[2]),
             $method === 'POST' && $path === '/api/v1/curricula' => self::createCurriculum($db, $familyId, $actorId),
             $method === 'GET' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/curricula$#', $path, $m) === 1
                 => self::listCurricula($db, $familyId, $m[1]),
@@ -28,9 +30,11 @@ final class CurriculumApi
                 => self::curriculumTree($db, $familyId, $m[1]),
             $method === 'POST' && preg_match('#^/api/v1/curricula/([0-9a-f-]{36})/subjects$#', $path, $m) === 1
                 => self::attachSubject($db, $familyId, $actorId, $m[1]),
-            $method === 'POST' && preg_match('#^/api/v1/curriculum-subjects/([0-9a-f-]{36})/sections$#', $path, $m) === 1
+            $method === 'POST' &&
+                preg_match('#^/api/v1/curriculum-subjects/([0-9a-f-]{36})/sections$#', $path, $m) === 1
                 => self::createChild($db, $familyId, $actorId, 'sections', 'curriculum_subject_id', $m[1]),
-            $method === 'PATCH' && preg_match('#^/api/v1/curriculum-subjects/([0-9a-f-]{36})/mastery-settings$#', $path, $m) === 1
+            $method === 'PATCH' &&
+                preg_match('#^/api/v1/curriculum-subjects/([0-9a-f-]{36})/mastery-settings$#', $path, $m) === 1
                 => self::updateMasterySettings($db, $familyId, $actorId, $m[1]),
             $method === 'POST' && preg_match('#^/api/v1/sections/([0-9a-f-]{36})/topics$#', $path, $m) === 1
                 => self::createChild($db, $familyId, $actorId, 'topics', 'section_id', $m[1]),
@@ -52,13 +56,19 @@ final class CurriculumApi
     {
         $statement = $db->prepare(
             'SELECT id, title, description, color, is_custom FROM subjects
-             WHERE family_id = :family_id AND deleted_at IS NULL ORDER BY title'
+             WHERE family_id = :family_id AND deleted_at IS NULL ORDER BY title',
         );
         $statement->execute(['family_id' => $familyId]);
-        $subjects = array_map(static fn (array $row): array => [
-            'id' => $row['id'], 'title' => $row['title'], 'description' => $row['description'],
-            'color' => $row['color'], 'isCustom' => (bool) $row['is_custom'],
-        ], $statement->fetchAll());
+        $subjects = array_map(
+            static fn(array $row): array => [
+                'id' => $row['id'],
+                'title' => $row['title'],
+                'description' => $row['description'],
+                'color' => $row['color'],
+                'isCustom' => (bool) $row['is_custom'],
+            ],
+            $statement->fetchAll(),
+        );
         Http::json(['subjects' => $subjects]);
     }
 
@@ -74,8 +84,14 @@ final class CurriculumApi
         $id = Uuid::v4();
         $db->prepare(
             'INSERT INTO subjects (id, family_id, title, description, color)
-             VALUES (:id, :family_id, :title, :description, :color)'
-        )->execute(['id' => $id, 'family_id' => $familyId, 'title' => $title, 'description' => $description, 'color' => $color]);
+             VALUES (:id, :family_id, :title, :description, :color)',
+        )->execute([
+            'id' => $id,
+            'family_id' => $familyId,
+            'title' => $title,
+            'description' => $description,
+            'color' => $color,
+        ]);
         Audit::record($db, $familyId, 'parent', $actorId, 'subject.created', 'subject', $id);
         Http::json(['subject' => compact('id', 'title', 'description', 'color')], 201);
     }
@@ -93,10 +109,19 @@ final class CurriculumApi
         $id = Uuid::v4();
         $db->prepare(
             'INSERT INTO curricula (id, family_id, student_id, title, school_year)
-             VALUES (:id, :family_id, :student_id, :title, :school_year)'
-        )->execute(['id' => $id, 'family_id' => $familyId, 'student_id' => $studentId, 'title' => $title, 'school_year' => $schoolYear]);
+             VALUES (:id, :family_id, :student_id, :title, :school_year)',
+        )->execute([
+            'id' => $id,
+            'family_id' => $familyId,
+            'student_id' => $studentId,
+            'title' => $title,
+            'school_year' => $schoolYear,
+        ]);
         Audit::record($db, $familyId, 'parent', $actorId, 'curriculum.created', 'curriculum', $id);
-        Http::json(['curriculum' => ['id' => $id, 'studentId' => $studentId, 'title' => $title, 'schoolYear' => $schoolYear]], 201);
+        Http::json(
+            ['curriculum' => ['id' => $id, 'studentId' => $studentId, 'title' => $title, 'schoolYear' => $schoolYear]],
+            201,
+        );
     }
 
     private static function listCurricula(PDO $db, string $familyId, string $studentId): never
@@ -105,13 +130,20 @@ final class CurriculumApi
         $statement = $db->prepare(
             'SELECT id, title, school_year, is_active FROM curricula
              WHERE student_id = :student_id AND family_id = :family_id AND deleted_at IS NULL
-             ORDER BY school_year DESC'
+             ORDER BY school_year DESC',
         );
         $statement->execute(['student_id' => $studentId, 'family_id' => $familyId]);
-        Http::json(['curricula' => array_map(static fn (array $row): array => [
-            'id' => $row['id'], 'title' => $row['title'], 'schoolYear' => $row['school_year'],
-            'isActive' => (bool) $row['is_active'],
-        ], $statement->fetchAll())]);
+        Http::json([
+            'curricula' => array_map(
+                static fn(array $row): array => [
+                    'id' => $row['id'],
+                    'title' => $row['title'],
+                    'schoolYear' => $row['school_year'],
+                    'isActive' => (bool) $row['is_active'],
+                ],
+                $statement->fetchAll(),
+            ),
+        ]);
     }
 
     private static function attachSubject(PDO $db, string $familyId, string $actorId, string $curriculumId): never
@@ -124,24 +156,77 @@ final class CurriculumApi
         $id = Uuid::v4();
         $db->prepare(
             'INSERT INTO curriculum_subjects (id, family_id, curriculum_id, subject_id, position)
-             VALUES (:id, :family_id, :curriculum_id, :subject_id, :position)'
-        )->execute(['id' => $id, 'family_id' => $familyId, 'curriculum_id' => $curriculumId, 'subject_id' => $subjectId, 'position' => $position]);
+             VALUES (:id, :family_id, :curriculum_id, :subject_id, :position)',
+        )->execute([
+            'id' => $id,
+            'family_id' => $familyId,
+            'curriculum_id' => $curriculumId,
+            'subject_id' => $subjectId,
+            'position' => $position,
+        ]);
         Audit::record($db, $familyId, 'parent', $actorId, 'curriculum.subject_attached', 'curriculum_subject', $id);
         Http::json(['curriculumSubject' => ['id' => $id, 'subjectId' => $subjectId, 'position' => $position]], 201);
     }
 
-    private static function updateMasterySettings(PDO $db,string $familyId,string $actorId,string $assignmentId): never
-    {
-        self::assertOwned($db,'curriculum_subjects',$assignmentId,$familyId);$body=Http::body();
-        $evidence=(int)($body['minEvidenceCount']??0);$types=(int)($body['minSuccessfulTypes']??0);$interval=(int)($body['reviewIntervalDays']??0);
-        if($evidence<1||$evidence>10||$types<1||$types>3||$types>$evidence||$interval<1||$interval>60)Http::error('validation_error','Проверьте пороги: подтверждения 1–10, типы 1–3, интервал 1–60 дней',422);
-        $db->prepare('INSERT INTO subject_mastery_settings(id,family_id,curriculum_subject_id,min_evidence_count,min_successful_types,review_interval_days) VALUES(:id,:family_id,:assignment_id,:evidence,:types,:interval) ON DUPLICATE KEY UPDATE min_evidence_count=VALUES(min_evidence_count),min_successful_types=VALUES(min_successful_types),review_interval_days=VALUES(review_interval_days)')->execute(['id'=>Uuid::v4(),'family_id'=>$familyId,'assignment_id'=>$assignmentId,'evidence'=>$evidence,'types'=>$types,'interval'=>$interval]);
-        Audit::record($db,$familyId,'parent',$actorId,'mastery_settings.updated','curriculum_subject',$assignmentId,['minEvidenceCount'=>$evidence,'minSuccessfulTypes'=>$types,'reviewIntervalDays'=>$interval]);
-        Http::json(['settings'=>['minEvidenceCount'=>$evidence,'minSuccessfulTypes'=>$types,'reviewIntervalDays'=>$interval]]);
+    private static function updateMasterySettings(
+        PDO $db,
+        string $familyId,
+        string $actorId,
+        string $assignmentId,
+    ): never {
+        self::assertOwned($db, 'curriculum_subjects', $assignmentId, $familyId);
+        $body = Http::body();
+        $evidence = (int) ($body['minEvidenceCount'] ?? 0);
+        $types = (int) ($body['minSuccessfulTypes'] ?? 0);
+        $interval = (int) ($body['reviewIntervalDays'] ?? 0);
+        if (
+            $evidence < 1 ||
+            $evidence > 10 ||
+            $types < 1 ||
+            $types > 3 ||
+            $types > $evidence ||
+            $interval < 1 ||
+            $interval > 60
+        ) {
+            Http::error('validation_error', 'Проверьте пороги: подтверждения 1–10, типы 1–3, интервал 1–60 дней', 422);
+        }
+        $db->prepare(
+            'INSERT INTO subject_mastery_settings(id,family_id,curriculum_subject_id,min_evidence_count,min_successful_types,review_interval_days) VALUES(:id,:family_id,:assignment_id,:evidence,:types,:interval) ON DUPLICATE KEY UPDATE min_evidence_count=VALUES(min_evidence_count),min_successful_types=VALUES(min_successful_types),review_interval_days=VALUES(review_interval_days)',
+        )->execute([
+            'id' => Uuid::v4(),
+            'family_id' => $familyId,
+            'assignment_id' => $assignmentId,
+            'evidence' => $evidence,
+            'types' => $types,
+            'interval' => $interval,
+        ]);
+        Audit::record(
+            $db,
+            $familyId,
+            'parent',
+            $actorId,
+            'mastery_settings.updated',
+            'curriculum_subject',
+            $assignmentId,
+            ['minEvidenceCount' => $evidence, 'minSuccessfulTypes' => $types, 'reviewIntervalDays' => $interval],
+        );
+        Http::json([
+            'settings' => [
+                'minEvidenceCount' => $evidence,
+                'minSuccessfulTypes' => $types,
+                'reviewIntervalDays' => $interval,
+            ],
+        ]);
     }
 
-    private static function createChild(PDO $db, string $familyId, string $actorId, string $table, string $parentColumn, string $parentId): never
-    {
+    private static function createChild(
+        PDO $db,
+        string $familyId,
+        string $actorId,
+        string $table,
+        string $parentColumn,
+        string $parentId,
+    ): never {
         $parents = ['sections' => 'curriculum_subjects', 'topics' => 'sections', 'lessons' => 'topics'];
         self::assertOwned($db, $parents[$table], $parentId, $familyId);
         $body = Http::body();
@@ -152,7 +237,14 @@ final class CurriculumApi
         $textColumn = $table === 'lessons' ? 'summary' : 'description';
         $sql = "INSERT INTO {$table} (id, family_id, {$parentColumn}, title, {$textColumn}, position)
                 VALUES (:id, :family_id, :parent_id, :title, :description, :position)";
-        $db->prepare($sql)->execute(['id' => $id, 'family_id' => $familyId, 'parent_id' => $parentId, 'title' => $title, 'description' => $description, 'position' => $position]);
+        $db->prepare($sql)->execute([
+            'id' => $id,
+            'family_id' => $familyId,
+            'parent_id' => $parentId,
+            'title' => $title,
+            'description' => $description,
+            'position' => $position,
+        ]);
         $entity = rtrim($table, 's');
         Audit::record($db, $familyId, 'parent', $actorId, "{$entity}.created", $entity, $id);
         Http::json([$entity => ['id' => $id, 'title' => $title, 'position' => $position]], 201);
@@ -166,16 +258,31 @@ final class CurriculumApi
         if ($table === 'subjects') {
             $description = self::optionalText($body, 'description');
             $color = (string) ($body['color'] ?? '#2563EB');
-            if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) Http::error('validation_error', 'Некорректный цвет', 422);
-            $db->prepare('UPDATE subjects SET title=:title, description=:description, color=:color WHERE id=:id AND family_id=:family_id')
-                ->execute(['title' => $title, 'description' => $description, 'color' => $color, 'id' => $id, 'family_id' => $familyId]);
+            if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) {
+                Http::error('validation_error', 'Некорректный цвет', 422);
+            }
+            $db->prepare(
+                'UPDATE subjects SET title=:title, description=:description, color=:color WHERE id=:id AND family_id=:family_id',
+            )->execute([
+                'title' => $title,
+                'description' => $description,
+                'color' => $color,
+                'id' => $id,
+                'family_id' => $familyId,
+            ]);
         } else {
             $textColumn = $table === 'lessons' ? 'summary' : 'description';
             $description = self::optionalText($body, $textColumn);
             $position = self::position($body);
             $sql = "UPDATE {$table} SET title=:title, {$textColumn}=:description, position=:position
                     WHERE id=:id AND family_id=:family_id";
-            $db->prepare($sql)->execute(['title' => $title, 'description' => $description, 'position' => $position, 'id' => $id, 'family_id' => $familyId]);
+            $db->prepare($sql)->execute([
+                'title' => $title,
+                'description' => $description,
+                'position' => $position,
+                'id' => $id,
+                'family_id' => $familyId,
+            ]);
         }
         $entity = rtrim($table, 's');
         Audit::record($db, $familyId, 'parent', $actorId, "{$entity}.updated", $entity, $id);
@@ -185,8 +292,10 @@ final class CurriculumApi
     private static function deleteEntity(PDO $db, string $familyId, string $actorId, string $table, string $id): never
     {
         self::assertOwned($db, $table, $id, $familyId);
-        $db->prepare("UPDATE {$table} SET deleted_at = NOW() WHERE id = :id AND family_id = :family_id")
-            ->execute(['id' => $id, 'family_id' => $familyId]);
+        $db->prepare("UPDATE {$table} SET deleted_at = NOW() WHERE id = :id AND family_id = :family_id")->execute([
+            'id' => $id,
+            'family_id' => $familyId,
+        ]);
         $entity = rtrim($table, 's');
         Audit::record($db, $familyId, 'parent', $actorId, "{$entity}.deleted", $entity, $id);
         Http::json(['status' => 'ok']);
@@ -209,27 +318,66 @@ final class CurriculumApi
              LEFT JOIN topics t ON t.section_id = se.id AND t.deleted_at IS NULL
              LEFT JOIN lessons l ON l.topic_id = t.id AND l.deleted_at IS NULL
              WHERE c.id = :id AND c.family_id = :family_id AND c.deleted_at IS NULL
-             ORDER BY cs.position, se.position, t.position, l.position'
+             ORDER BY cs.position, se.position, t.position, l.position',
         );
         $statement->execute(['id' => $curriculumId, 'family_id' => $familyId]);
         $rows = $statement->fetchAll();
-        if ($rows === []) Http::error('not_found', 'Учебная программа не найдена', 404);
+        if ($rows === []) {
+            Http::error('not_found', 'Учебная программа не найдена', 404);
+        }
         $first = $rows[0];
-        $tree = ['id' => $first['id'], 'studentId' => $first['student_id'], 'title' => $first['title'], 'schoolYear' => $first['school_year'], 'subjects' => []];
+        $tree = [
+            'id' => $first['id'],
+            'studentId' => $first['student_id'],
+            'title' => $first['title'],
+            'schoolYear' => $first['school_year'],
+            'subjects' => [],
+        ];
         foreach ($rows as $row) {
-            if ($row['curriculum_subject_id'] === null || $row['subject_id'] === null) continue;
+            if ($row['curriculum_subject_id'] === null || $row['subject_id'] === null) {
+                continue;
+            }
             $subjectKey = (string) $row['curriculum_subject_id'];
-            $tree['subjects'][$subjectKey] ??= ['id' => $row['subject_id'], 'assignmentId' => $subjectKey, 'title' => $row['subject_title'], 'color' => $row['color'], 'position' => (int) $row['subject_position'], 'masterySettings'=>['minEvidenceCount'=>(int)$row['min_evidence_count'],'minSuccessfulTypes'=>(int)$row['min_successful_types'],'reviewIntervalDays'=>(int)$row['review_interval_days']], 'sections' => []];
-            if ($row['section_id'] === null) continue;
+            $tree['subjects'][$subjectKey] ??= [
+                'id' => $row['subject_id'],
+                'assignmentId' => $subjectKey,
+                'title' => $row['subject_title'],
+                'color' => $row['color'],
+                'position' => (int) $row['subject_position'],
+                'masterySettings' => [
+                    'minEvidenceCount' => (int) $row['min_evidence_count'],
+                    'minSuccessfulTypes' => (int) $row['min_successful_types'],
+                    'reviewIntervalDays' => (int) $row['review_interval_days'],
+                ],
+                'sections' => [],
+            ];
+            if ($row['section_id'] === null) {
+                continue;
+            }
             $sectionKey = (string) $row['section_id'];
-            $tree['subjects'][$subjectKey]['sections'][$sectionKey] ??= ['id' => $sectionKey, 'title' => $row['section_title'], 'position' => (int) $row['section_position'], 'topics' => []];
-            if ($row['topic_id'] === null) continue;
+            $tree['subjects'][$subjectKey]['sections'][$sectionKey] ??= [
+                'id' => $sectionKey,
+                'title' => $row['section_title'],
+                'position' => (int) $row['section_position'],
+                'topics' => [],
+            ];
+            if ($row['topic_id'] === null) {
+                continue;
+            }
             $topicKey = (string) $row['topic_id'];
-            $tree['subjects'][$subjectKey]['sections'][$sectionKey]['topics'][$topicKey] ??= ['id' => $topicKey, 'title' => $row['topic_title'], 'position' => (int) $row['topic_position'], 'lessons' => []];
+            $tree['subjects'][$subjectKey]['sections'][$sectionKey]['topics'][$topicKey] ??= [
+                'id' => $topicKey,
+                'title' => $row['topic_title'],
+                'position' => (int) $row['topic_position'],
+                'lessons' => [],
+            ];
             if ($row['lesson_id'] !== null) {
                 $tree['subjects'][$subjectKey]['sections'][$sectionKey]['topics'][$topicKey]['lessons'][] = [
-                    'id' => $row['lesson_id'], 'title' => $row['lesson_title'], 'summary' => $row['summary'],
-                    'position' => (int) $row['lesson_position'], 'status' => $row['status'],
+                    'id' => $row['lesson_id'],
+                    'title' => $row['lesson_title'],
+                    'summary' => $row['summary'],
+                    'position' => (int) $row['lesson_position'],
+                    'status' => $row['status'],
                 ];
             }
         }
@@ -242,26 +390,34 @@ final class CurriculumApi
         self::assertOwned($db, 'lessons', $lessonId, $familyId);
         $lessonStatement = $db->prepare(
             'SELECT id, title, summary, estimated_minutes, status FROM lessons
-             WHERE id = :id AND family_id = :family_id AND deleted_at IS NULL'
+             WHERE id = :id AND family_id = :family_id AND deleted_at IS NULL',
         );
         $lessonStatement->execute(['id' => $lessonId, 'family_id' => $familyId]);
         $lesson = $lessonStatement->fetch();
         $blocksStatement = $db->prepare(
             'SELECT id, block_type, content_json, position FROM content_blocks
-             WHERE lesson_id = :lesson_id AND family_id = :family_id ORDER BY position, created_at'
+             WHERE lesson_id = :lesson_id AND family_id = :family_id ORDER BY position, created_at',
         );
         $blocksStatement->execute(['lesson_id' => $lessonId, 'family_id' => $familyId]);
-        $blocks = array_map(static fn (array $row): array => [
-            'id' => $row['id'],
-            'blockType' => $row['block_type'],
-            'content' => json_decode((string) $row['content_json'], true, flags: JSON_THROW_ON_ERROR),
-            'position' => (int) $row['position'],
-        ], $blocksStatement->fetchAll());
-        Http::json(['lesson' => [
-            'id' => $lesson['id'], 'title' => $lesson['title'], 'summary' => $lesson['summary'],
-            'estimatedMinutes' => $lesson['estimated_minutes'] === null ? null : (int) $lesson['estimated_minutes'],
-            'status' => $lesson['status'], 'blocks' => $blocks,
-        ]]);
+        $blocks = array_map(
+            static fn(array $row): array => [
+                'id' => $row['id'],
+                'blockType' => $row['block_type'],
+                'content' => json_decode((string) $row['content_json'], true, flags: JSON_THROW_ON_ERROR),
+                'position' => (int) $row['position'],
+            ],
+            $blocksStatement->fetchAll(),
+        );
+        Http::json([
+            'lesson' => [
+                'id' => $lesson['id'],
+                'title' => $lesson['title'],
+                'summary' => $lesson['summary'],
+                'estimatedMinutes' => $lesson['estimated_minutes'] === null ? null : (int) $lesson['estimated_minutes'],
+                'status' => $lesson['status'],
+                'blocks' => $blocks,
+            ],
+        ]);
     }
 
     private static function createContentBlock(PDO $db, string $familyId, string $actorId, string $lessonId): never
@@ -272,14 +428,23 @@ final class CurriculumApi
         $id = Uuid::v4();
         $db->prepare(
             'INSERT INTO content_blocks (id, family_id, lesson_id, block_type, content_json, position)
-             VALUES (:id, :family_id, :lesson_id, :block_type, :content_json, :position)'
+             VALUES (:id, :family_id, :lesson_id, :block_type, :content_json, :position)',
         )->execute([
-            'id' => $id, 'family_id' => $familyId, 'lesson_id' => $lessonId, 'block_type' => $blockType,
-            'content_json' => json_encode($content, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
+            'id' => $id,
+            'family_id' => $familyId,
+            'lesson_id' => $lessonId,
+            'block_type' => $blockType,
+            'content_json' => json_encode(
+                $content,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
+            ),
             'position' => $position,
         ]);
         Audit::record($db, $familyId, 'parent', $actorId, 'content_block.created', 'content_block', $id);
-        Http::json(['block' => ['id' => $id, 'blockType' => $blockType, 'content' => $content, 'position' => $position]], 201);
+        Http::json(
+            ['block' => ['id' => $id, 'blockType' => $blockType, 'content' => $content, 'position' => $position]],
+            201,
+        );
     }
 
     private static function updateContentBlock(PDO $db, string $familyId, string $actorId, string $blockId): never
@@ -288,11 +453,16 @@ final class CurriculumApi
         [$blockType, $content, $position] = self::blockInput(Http::body());
         $db->prepare(
             'UPDATE content_blocks SET block_type = :block_type, content_json = :content_json, position = :position
-             WHERE id = :id AND family_id = :family_id'
+             WHERE id = :id AND family_id = :family_id',
         )->execute([
             'block_type' => $blockType,
-            'content_json' => json_encode($content, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
-            'position' => $position, 'id' => $blockId, 'family_id' => $familyId,
+            'content_json' => json_encode(
+                $content,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
+            ),
+            'position' => $position,
+            'id' => $blockId,
+            'family_id' => $familyId,
         ]);
         Audit::record($db, $familyId, 'parent', $actorId, 'content_block.updated', 'content_block', $blockId);
         Http::json(['status' => 'ok']);
@@ -301,8 +471,10 @@ final class CurriculumApi
     private static function deleteContentBlock(PDO $db, string $familyId, string $actorId, string $blockId): never
     {
         self::assertOwned($db, 'content_blocks', $blockId, $familyId);
-        $db->prepare('DELETE FROM content_blocks WHERE id = :id AND family_id = :family_id')
-            ->execute(['id' => $blockId, 'family_id' => $familyId]);
+        $db->prepare('DELETE FROM content_blocks WHERE id = :id AND family_id = :family_id')->execute([
+            'id' => $blockId,
+            'family_id' => $familyId,
+        ]);
         Audit::record($db, $familyId, 'parent', $actorId, 'content_block.deleted', 'content_block', $blockId);
         Http::json(['status' => 'ok']);
     }
@@ -316,14 +488,22 @@ final class CurriculumApi
             Http::error('validation_error', 'Недопустимый тип блока', 422);
         }
         $content = $body['content'] ?? null;
-        if (!is_array($content)) Http::error('validation_error', 'Содержимое блока обязательно', 422);
+        if (!is_array($content)) {
+            Http::error('validation_error', 'Содержимое блока обязательно', 422);
+        }
         $valueKey = $blockType === 'markdown' || $blockType === 'example' ? 'text' : 'url';
         $value = trim((string) ($content[$valueKey] ?? ''));
-        if ($value === '' || mb_strlen($value) > 20000) Http::error('validation_error', 'Проверьте содержимое блока', 422);
-        if ($valueKey === 'url' && filter_var($value, FILTER_VALIDATE_URL) === false) Http::error('validation_error', 'Укажите корректную ссылку', 422);
+        if ($value === '' || mb_strlen($value) > 20000) {
+            Http::error('validation_error', 'Проверьте содержимое блока', 422);
+        }
+        if ($valueKey === 'url' && filter_var($value, FILTER_VALIDATE_URL) === false) {
+            Http::error('validation_error', 'Укажите корректную ссылку', 422);
+        }
         $normalized = [$valueKey => $value];
         $caption = trim((string) ($content['caption'] ?? ''));
-        if ($caption !== '') $normalized['caption'] = mb_substr($caption, 0, 300);
+        if ($caption !== '') {
+            $normalized['caption'] = mb_substr($caption, 0, 300);
+        }
         return [$blockType, $normalized, self::position($body)];
     }
 
@@ -332,26 +512,46 @@ final class CurriculumApi
     {
         foreach ($items as &$subject) {
             $subject['sections'] = array_values($subject['sections']);
-            foreach ($subject['sections'] as &$section) $section['topics'] = array_values($section['topics']);
+            foreach ($subject['sections'] as &$section) {
+                $section['topics'] = array_values($section['topics']);
+            }
         }
         return array_values($items);
     }
 
     private static function assertOwned(PDO $db, string $table, string $id, string $familyId): void
     {
-        $allowed = ['students', 'subjects', 'curricula', 'curriculum_subjects', 'sections', 'topics', 'lessons', 'content_blocks'];
-        if (!in_array($table, $allowed, true) || !preg_match('/^[0-9a-f-]{36}$/', $id)) Http::error('not_found', 'Сущность не найдена', 404);
+        $allowed = [
+            'students',
+            'subjects',
+            'curricula',
+            'curriculum_subjects',
+            'sections',
+            'topics',
+            'lessons',
+            'content_blocks',
+        ];
+        if (!in_array($table, $allowed, true) || !preg_match('/^[0-9a-f-]{36}$/', $id)) {
+            Http::error('not_found', 'Сущность не найдена', 404);
+        }
         $withoutSoftDelete = ['curriculum_subjects', 'content_blocks'];
-        $statement = $db->prepare("SELECT id FROM {$table} WHERE id = :id AND family_id = :family_id" . (in_array($table, $withoutSoftDelete, true) ? '' : ' AND deleted_at IS NULL'));
+        $statement = $db->prepare(
+            "SELECT id FROM {$table} WHERE id = :id AND family_id = :family_id" .
+                (in_array($table, $withoutSoftDelete, true) ? '' : ' AND deleted_at IS NULL'),
+        );
         $statement->execute(['id' => $id, 'family_id' => $familyId]);
-        if (!$statement->fetchColumn()) Http::error('not_found', 'Сущность не найдена', 404);
+        if (!$statement->fetchColumn()) {
+            Http::error('not_found', 'Сущность не найдена', 404);
+        }
     }
 
     /** @param array<string, mixed> $body */
     private static function title(array $body): string
     {
         $title = trim((string) ($body['title'] ?? ''));
-        if ($title === '' || mb_strlen($title) > 180) Http::error('validation_error', 'Название обязательно и не длиннее 180 символов', 422);
+        if ($title === '' || mb_strlen($title) > 180) {
+            Http::error('validation_error', 'Название обязательно и не длиннее 180 символов', 422);
+        }
         return $title;
     }
 
@@ -366,7 +566,9 @@ final class CurriculumApi
     private static function position(array $body): int
     {
         $position = (int) ($body['position'] ?? 0);
-        if ($position < 0) Http::error('validation_error', 'Позиция не может быть отрицательной', 422);
+        if ($position < 0) {
+            Http::error('validation_error', 'Позиция не может быть отрицательной', 422);
+        }
         return $position;
     }
 }

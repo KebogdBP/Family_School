@@ -10,10 +10,10 @@ export const loginParent = (input: { email: string; password: string }) =>
   })
 
 export const loginStudent = (input: { studentId: string; pin: string }) =>
-  api<{ student: { id: string; role: 'student'; displayName: string; grade: number } }>(
-    '/auth/student/login',
-    { method: 'POST', body: JSON.stringify(input) },
-  )
+  api<{ student: { id: string; role: 'student'; displayName: string; grade: number } }>('/auth/student/login', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
 
 export const setupFamily = (input: {
   setupToken: string
@@ -32,5 +32,10 @@ export const setupFamily = (input: {
 
 export const logout = () => api<{ status: string }>('/auth/logout', { method: 'POST' })
 
-export type FamilyExport = { schemaVersion: number; generatedAt: string; family: { id: string; name: string }; data: Record<string, Array<Record<string, unknown>>> }
+export type FamilyExport = {
+  schemaVersion: number
+  generatedAt: string
+  family: { id: string; name: string }
+  data: Record<string, Array<Record<string, unknown>>>
+}
 export const exportFamilyData = () => api<FamilyExport>('/family/export')

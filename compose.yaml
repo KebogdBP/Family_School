@@ -7,11 +7,11 @@ services:
       MYSQL_PASSWORD: homeedu-dev-password
       MYSQL_ROOT_PASSWORD: homeedu-root-dev-password
     ports:
-      - "3306:3306"
+      - '3306:3306'
     volumes:
       - homeedu_mysql:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent']
       interval: 5s
       timeout: 5s
       retries: 20
@@ -31,7 +31,7 @@ services:
       DB_PASSWORD: homeedu-dev-password
       AI_PROVIDER: disabled
     ports:
-      - "8080:80"
+      - '8080:80'
     volumes:
       - ./apps/api:/var/www/html
     depends_on:

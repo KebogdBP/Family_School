@@ -10,11 +10,14 @@ final class Http
 
     public static function requestId(): string
     {
-        if (self::$requestId !== null) return self::$requestId;
+        if (self::$requestId !== null) {
+            return self::$requestId;
+        }
         $provided = $_SERVER['HTTP_X_REQUEST_ID'] ?? '';
-        self::$requestId = is_string($provided) && preg_match('/^[A-Za-z0-9._-]{8,80}$/', $provided) === 1
-            ? $provided
-            : bin2hex(random_bytes(12));
+        self::$requestId =
+            is_string($provided) && preg_match('/^[A-Za-z0-9._-]{8,80}$/', $provided) === 1
+                ? $provided
+                : bin2hex(random_bytes(12));
         return self::$requestId;
     }
 
@@ -27,7 +30,7 @@ final class Http
         header('X-Request-ID: ' . self::requestId());
         header('Cache-Control: no-store');
         echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
-        exit;
+        exit();
     }
 
     /** @return array<string, mixed> */

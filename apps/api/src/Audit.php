@@ -22,7 +22,7 @@ final class Audit
         $statement = $db->prepare(
             'INSERT INTO audit_events
              (id, family_id, actor_role, actor_id, event_type, entity_type, entity_id, metadata_json)
-             VALUES (:id, :family_id, :actor_role, :actor_id, :event_type, :entity_type, :entity_id, :metadata)'
+             VALUES (:id, :family_id, :actor_role, :actor_id, :event_type, :entity_type, :entity_id, :metadata)',
         );
         $statement->execute([
             'id' => Uuid::v4(),
@@ -36,4 +36,3 @@ final class Audit
         ]);
     }
 }
-

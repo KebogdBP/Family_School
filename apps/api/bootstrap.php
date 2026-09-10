@@ -25,11 +25,14 @@ set_exception_handler(static function (Throwable $error): void {
         'status' => 500,
         'phase' => 'bootstrap',
     ]);
-    HomeEdu\Http::json([
-        'error' => [
-            'code' => 'bootstrap_error',
-            'message' => 'Сервис временно недоступен',
-            'requestId' => HomeEdu\Http::requestId(),
+    HomeEdu\Http::json(
+        [
+            'error' => [
+                'code' => 'bootstrap_error',
+                'message' => 'Сервис временно недоступен',
+                'requestId' => HomeEdu\Http::requestId(),
+            ],
         ],
-    ], 500);
+        500,
+    );
 });

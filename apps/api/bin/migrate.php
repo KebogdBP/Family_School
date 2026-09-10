@@ -11,7 +11,7 @@ $db->exec(
     'CREATE TABLE IF NOT EXISTS schema_migrations (
         version VARCHAR(64) PRIMARY KEY,
         applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci',
 );
 
 $applied = $db->query('SELECT version FROM schema_migrations')->fetchAll(PDO::FETCH_COLUMN);
@@ -31,9 +31,7 @@ foreach ($files as $file) {
 
     try {
         $db->exec($sql);
-        $statement = $db->prepare(
-            'INSERT IGNORE INTO schema_migrations (version) VALUES (:version)'
-        );
+        $statement = $db->prepare('INSERT IGNORE INTO schema_migrations (version) VALUES (:version)');
         $statement->execute(['version' => $version]);
         fwrite(STDOUT, "Applied {$version}\n");
     } catch (Throwable $error) {

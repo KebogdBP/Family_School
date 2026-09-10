@@ -14,9 +14,19 @@ const expectNoPageOverflow = async (page: Page) => {
   const dimensions = await page.evaluate(() => ({
     width: document.documentElement.clientWidth,
     scrollWidth: document.documentElement.scrollWidth,
-    offenders: [...document.querySelectorAll<HTMLElement>('body *')].filter((element) => element.getBoundingClientRect().right > document.documentElement.clientWidth + 1).slice(0, 5).map((element) => ({ tag: element.tagName, className: element.className, right: Math.round(element.getBoundingClientRect().right), scrollWidth: element.scrollWidth })),
+    offenders: [...document.querySelectorAll<HTMLElement>('body *')]
+      .filter((element) => element.getBoundingClientRect().right > document.documentElement.clientWidth + 1)
+      .slice(0, 5)
+      .map((element) => ({
+        tag: element.tagName,
+        className: element.className,
+        right: Math.round(element.getBoundingClientRect().right),
+        scrollWidth: element.scrollWidth,
+      })),
   }))
-  expect(dimensions.scrollWidth, `Page overflows horizontally: ${JSON.stringify(dimensions)}`).toBeLessThanOrEqual(dimensions.width + 1)
+  expect(dimensions.scrollWidth, `Page overflows horizontally: ${JSON.stringify(dimensions)}`).toBeLessThanOrEqual(
+    dimensions.width + 1,
+  )
 }
 
 async function parentLogin(page: Page) {
@@ -90,25 +100,68 @@ async function completeChildCycle(page: Page, child: Child) {
 
 test.beforeAll(async () => {
   api = await request.newContext({ baseURL: 'http://127.0.0.1:8080' })
-  const setup = await api.post(endpoint('/setup'), { headers: { 'X-Setup-Token': 'development-setup-token' }, data: { familyName: 'Семья E2E', displayName: 'Игорь', ...parent } })
+  const setup = await api.post(endpoint('/setup'), {
+    headers: { 'X-Setup-Token': 'development-setup-token' },
+    data: { familyName: 'Семья E2E', displayName: 'Игорь', ...parent },
+  })
   expect(setup.ok(), await setup.text()).toBeTruthy()
   for (const item of [
-    { name: 'Давид', grade: 4, age: 10, pin: '1004', route: 'david-fractions', title: 'Доля и целое', answer: 'first-option' },
-    { name: 'Сара', grade: 6, age: 12, pin: '1206', route: 'sara-fractions', title: 'Сокращение дробей', answer: '3/4' },
+    {
+      name: 'Давид',
+      grade: 4,
+      age: 10,
+      pin: '1004',
+      route: 'david-fractions',
+      title: 'Доля и целое',
+      answer: 'first-option',
+    },
+    {
+      name: 'Сара',
+      grade: 6,
+      age: 12,
+      pin: '1206',
+      route: 'sara-fractions',
+      title: 'Сокращение дробей',
+      answer: '3/4',
+    },
   ]) {
-    const created = await (await api.post(endpoint('/students'), { data: { displayName: item.name, grade: item.grade, age: item.age, pin: item.pin } })).json()
-    const installed = await (await api.post(endpoint(`/students/${created.student.id}/pilot-content/${item.route}`))).json()
+    const created = await (
+      await api.post(endpoint('/students'), {
+        data: { displayName: item.name, grade: item.grade, age: item.age, pin: item.pin },
+      })
+    ).json()
+    const installed = await (
+      await api.post(endpoint(`/students/${created.student.id}/pilot-content/${item.route}`))
+    ).json()
     const tree = await (await api.get(endpoint(`/curricula/${installed.curriculumId}`))).json()
-    const lessons = tree.curriculum.subjects.flatMap((subject: any) => subject.sections.flatMap((section: any) => section.topics.flatMap((topic: any) => topic.lessons)))
+    const lessons = tree.curriculum.subjects.flatMap((subject: any) =>
+      subject.sections.flatMap((section: any) => section.topics.flatMap((topic: any) => topic.lessons)),
+    )
     const lesson = lessons.find((value: any) => value.title === item.title)
     expect(lesson).toBeTruthy()
-    const planned = await api.post(endpoint(`/students/${created.student.id}/plan-items`), { data: { lessonId: lesson.id, scheduledDate: new Date().toISOString().slice(0, 10), isRequired: true, position: 0 } })
+    const planned = await api.post(endpoint(`/students/${created.student.id}/plan-items`), {
+      data: {
+        lessonId: lesson.id,
+        scheduledDate: new Date().toISOString().slice(0, 10),
+        isRequired: true,
+        position: 0,
+      },
+    })
     expect(planned.ok()).toBeTruthy()
-    children.push({ id: created.student.id, name: item.name, pin: item.pin, lessonId: lesson.id, lessonTitle: item.title, answer: item.answer })
+    children.push({
+      id: created.student.id,
+      name: item.name,
+      pin: item.pin,
+      lessonId: lesson.id,
+      lessonTitle: item.title,
+      answer: item.answer,
+    })
   }
 })
 
-test.afterAll(async () => { await api?.dispose() })
+test.afterAll(async () => {
+  await api?.dispose()
+})
 
 test('Сара и Давид проходят полный учебный цикл, а родитель утверждает план', async ({ page }) => {
   test.setTimeout(60_000)

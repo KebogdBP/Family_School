@@ -15,23 +15,26 @@ final class StudentLearningApi
         $studentId = (string) $session['student_id'];
 
         match (true) {
-            $path === '/api/v1/student/diagnostic'
-                => DiagnosticApi::dispatch($db,$method),
-            $method === 'GET' && $path === '/api/v1/student/lessons'
-                => self::listLessons($db, $familyId, $studentId),
-            $method === 'GET' && $path === '/api/v1/student/today'
-                => self::today($db, $familyId, $studentId),
-            $method === 'GET' && $path === '/api/v1/student/mastery'
-                => Http::json(['subjects'=>Mastery::subjects($db,$familyId,$studentId),'topics'=>Mastery::topics($db,$familyId,$studentId)]),
-            $method === 'GET' && $path === '/api/v1/student/achievements'
-                => Http::json(['achievements'=>Achievements::list($db,$familyId,$studentId)]),
-            $method === 'GET' && $path === '/api/v1/student/reviews'
-                => Http::json(['reviewTasks'=>Mastery::reviewTasks($db,$familyId,$studentId)]),
+            $path === '/api/v1/student/diagnostic' => DiagnosticApi::dispatch($db, $method),
+            $method === 'GET' && $path === '/api/v1/student/lessons' => self::listLessons($db, $familyId, $studentId),
+            $method === 'GET' && $path === '/api/v1/student/today' => self::today($db, $familyId, $studentId),
+            $method === 'GET' && $path === '/api/v1/student/mastery' => Http::json([
+                'subjects' => Mastery::subjects($db, $familyId, $studentId),
+                'topics' => Mastery::topics($db, $familyId, $studentId),
+            ]),
+            $method === 'GET' && $path === '/api/v1/student/achievements' => Http::json([
+                'achievements' => Achievements::list($db, $familyId, $studentId),
+            ]),
+            $method === 'GET' && $path === '/api/v1/student/reviews' => Http::json([
+                'reviewTasks' => Mastery::reviewTasks($db, $familyId, $studentId),
+            ]),
             $method === 'GET' && preg_match('#^/api/v1/student/lessons/([0-9a-f-]{36})$#', $path, $matches) === 1
                 => self::lesson($db, $familyId, $studentId, $matches[1]),
-            $method === 'PATCH' && preg_match('#^/api/v1/student/lessons/([0-9a-f-]{36})/progress$#', $path, $matches) === 1
+            $method === 'PATCH' &&
+                preg_match('#^/api/v1/student/lessons/([0-9a-f-]{36})/progress$#', $path, $matches) === 1
                 => self::saveProgress($db, $familyId, $studentId, $matches[1]),
-            $method === 'POST' && preg_match('#^/api/v1/student/lessons/([0-9a-f-]{36})/reflection$#', $path, $matches) === 1
+            $method === 'POST' &&
+                preg_match('#^/api/v1/student/lessons/([0-9a-f-]{36})/reflection$#', $path, $matches) === 1
                 => self::saveReflection($db, $familyId, $studentId, $matches[1]),
             default => Http::error('not_found', 'Маршрут не найден', 404),
         };
@@ -56,7 +59,7 @@ final class StudentLearningApi
              LEFT JOIN lesson_progress lp ON lp.lesson_id = l.id AND lp.student_id = c.student_id
              WHERE c.student_id = :student_id AND c.family_id = :family_id
                    AND c.is_active = TRUE AND c.deleted_at IS NULL
-             ORDER BY cs.position, se.position, t.position, l.position'
+             ORDER BY cs.position, se.position, t.position, l.position',
         );
         $statement->execute(['student_id' => $studentId, 'family_id' => $familyId]);
         Http::json(['lessons' => array_map([self::class, 'lessonSummary'], $statement->fetchAll())]);
@@ -87,9 +90,14 @@ final class StudentLearningApi
                         FROM activities a LEFT JOIN quiz_attempts qa ON qa.activity_id=a.id AND qa.student_id=:quiz_student
                         WHERE a.activity_type=\'quiz\' AND a.deleted_at IS NULL GROUP BY a.lesson_id) qz ON qz.lesson_id=l.id
              WHERE wp.student_id=:student_id AND wp.family_id=:family_id AND pi.scheduled_date=CURDATE()
-             ORDER BY pi.is_required DESC, pi.position, pi.created_at'
+             ORDER BY pi.is_required DESC, pi.position, pi.created_at',
         );
-        $statement->execute(['homework_student'=>$studentId,'quiz_student'=>$studentId,'student_id' => $studentId, 'family_id' => $familyId]);
+        $statement->execute([
+            'homework_student' => $studentId,
+            'quiz_student' => $studentId,
+            'student_id' => $studentId,
+            'family_id' => $familyId,
+        ]);
         $lessons = array_map(static function (array $row): array {
             $lesson = self::lessonSummary($row);
             $lesson['planItemId'] = $row['plan_item_id'];
@@ -97,13 +105,18 @@ final class StudentLearningApi
             $lesson['planStatus'] = self::planStatus($row);
             return $lesson;
         }, $statement->fetchAll());
-        Http::json(['date' => date('Y-m-d'), 'lessons' => $lessons, 'continueLesson'=>self::lastInProgressLesson($db,$familyId,$studentId), 'reviewTasks'=>Mastery::reviewTasks($db,$familyId,$studentId,true)]);
+        Http::json([
+            'date' => date('Y-m-d'),
+            'lessons' => $lessons,
+            'continueLesson' => self::lastInProgressLesson($db, $familyId, $studentId),
+            'reviewTasks' => Mastery::reviewTasks($db, $familyId, $studentId, true),
+        ]);
     }
 
     /** @return array<string,mixed>|null */
-    private static function lastInProgressLesson(PDO $db,string $familyId,string $studentId): ?array
+    private static function lastInProgressLesson(PDO $db, string $familyId, string $studentId): ?array
     {
-        $statement=$db->prepare(
+        $statement = $db->prepare(
             'SELECT l.id,l.title,l.summary,l.estimated_minutes,l.position,
                     s.title AS subject_title,s.color AS subject_color,se.title AS section_title,t.title AS topic_title,
                     lp.status AS progress_status,lp.last_block_position,lp.updated_at,
@@ -116,12 +129,19 @@ final class StudentLearningApi
              JOIN subjects s ON s.id=cs.subject_id AND s.deleted_at IS NULL
              WHERE lp.family_id=:family_id AND lp.student_id=:student_id AND lp.status=\'in_progress\'
                    AND c.family_id=:curriculum_family AND c.student_id=:curriculum_student
-             ORDER BY lp.updated_at DESC LIMIT 1'
+             ORDER BY lp.updated_at DESC LIMIT 1',
         );
-        $statement->execute(['family_id'=>$familyId,'student_id'=>$studentId,'curriculum_family'=>$familyId,'curriculum_student'=>$studentId]);
-        $row=$statement->fetch();
-        if(!$row)return null;
-        return self::lessonSummary($row)+['lastActivityAt'=>$row['updated_at']];
+        $statement->execute([
+            'family_id' => $familyId,
+            'student_id' => $studentId,
+            'curriculum_family' => $familyId,
+            'curriculum_student' => $studentId,
+        ]);
+        $row = $statement->fetch();
+        if (!$row) {
+            return null;
+        }
+        return self::lessonSummary($row) + ['lastActivityAt' => $row['updated_at']];
     }
 
     private static function lesson(PDO $db, string $familyId, string $studentId, string $lessonId): never
@@ -129,26 +149,92 @@ final class StudentLearningApi
         $lesson = self::assignedLesson($db, $familyId, $studentId, $lessonId);
         $blocks = $db->prepare(
             'SELECT id, block_type, content_json, position FROM content_blocks
-             WHERE lesson_id = :lesson_id AND family_id = :family_id ORDER BY position, created_at'
+             WHERE lesson_id = :lesson_id AND family_id = :family_id ORDER BY position, created_at',
         );
         $blocks->execute(['lesson_id' => $lessonId, 'family_id' => $familyId]);
-        $lesson['blocks'] = array_map(static fn (array $row): array => [
-            'id' => $row['id'], 'blockType' => $row['block_type'],
-            'content' => json_decode((string) $row['content_json'], true, flags: JSON_THROW_ON_ERROR),
-            'position' => (int) $row['position'],
-        ], $blocks->fetchAll());
-        $reflection = $db->prepare('SELECT feeling, comment FROM student_reflections WHERE student_id=:student_id AND lesson_id=:lesson_id');
+        $lesson['blocks'] = array_map(
+            static fn(array $row): array => [
+                'id' => $row['id'],
+                'blockType' => $row['block_type'],
+                'content' => json_decode((string) $row['content_json'], true, flags: JSON_THROW_ON_ERROR),
+                'position' => (int) $row['position'],
+            ],
+            $blocks->fetchAll(),
+        );
+        $reflection = $db->prepare(
+            'SELECT feeling, comment FROM student_reflections WHERE student_id=:student_id AND lesson_id=:lesson_id',
+        );
         $reflection->execute(['student_id' => $studentId, 'lesson_id' => $lessonId]);
         $savedReflection = $reflection->fetch();
-        $quizzes = $db->prepare('SELECT a.id,a.title,q.id AS question_id,q.prompt,q.question_type,q.options_json FROM activities a JOIN quiz_questions q ON q.activity_id=a.id WHERE a.lesson_id=:lesson_id AND a.family_id=:family_id AND a.activity_type=\'quiz\' AND a.deleted_at IS NULL ORDER BY a.position,a.created_at');
-        $quizzes->execute(['lesson_id'=>$lessonId,'family_id'=>$familyId]);
-        $studentQuizzes=array_map(static fn(array $row):array=>['id'=>$row['id'],'title'=>$row['title'],'question'=>['id'=>$row['question_id'],'prompt'=>$row['prompt'],'questionType'=>$row['question_type'],'options'=>$row['options_json']?json_decode((string)$row['options_json'],true,flags:JSON_THROW_ON_ERROR):[]]],$quizzes->fetchAll());
-        $homeworks=$db->prepare('SELECT a.id,a.title,a.instructions,hs.id AS submission_id,hs.response_text,hs.status,(SELECT sr.comment FROM submission_reviews sr WHERE sr.submission_id=hs.id ORDER BY sr.created_at DESC LIMIT 1) AS review_comment,(SELECT sr.grade FROM submission_reviews sr WHERE sr.submission_id=hs.id ORDER BY sr.created_at DESC LIMIT 1) AS review_grade FROM activities a LEFT JOIN homework_submissions hs ON hs.activity_id=a.id AND hs.student_id=:student_id WHERE a.lesson_id=:lesson_id AND a.family_id=:family_id AND a.activity_type=\'open_work\' AND a.deleted_at IS NULL ORDER BY a.position,a.created_at');
-        $homeworks->execute(['student_id'=>$studentId,'lesson_id'=>$lessonId,'family_id'=>$familyId]);
-        $studentHomeworks=array_map(static fn(array $r):array=>['id'=>$r['id'],'title'=>$r['title'],'instructions'=>$r['instructions'],'submission'=>$r['submission_id']?['id'=>$r['submission_id'],'responseText'=>$r['response_text'],'status'=>$r['status'],'reviewComment'=>$r['review_comment'],'reviewGrade'=>$r['review_grade']===null?null:(int)$r['review_grade']]:null],$homeworks->fetchAll());
-        foreach($studentHomeworks as &$homework){if($homework['submission']){$files=$db->prepare('SELECT id,original_name,mime_type,size_bytes FROM submission_files WHERE submission_id=:submission_id ORDER BY created_at');$files->execute(['submission_id'=>$homework['submission']['id']]);$homework['submission']['files']=array_map(static fn(array $f):array=>['id'=>$f['id'],'originalName'=>$f['original_name'],'mimeType'=>$f['mime_type'],'sizeBytes'=>(int)$f['size_bytes'],'url'=>'/api/v1/submission-files/'.$f['id']],$files->fetchAll());}}
+        $quizzes = $db->prepare(
+            'SELECT a.id,a.title,q.id AS question_id,q.prompt,q.question_type,q.options_json FROM activities a JOIN quiz_questions q ON q.activity_id=a.id WHERE a.lesson_id=:lesson_id AND a.family_id=:family_id AND a.activity_type=\'quiz\' AND a.deleted_at IS NULL ORDER BY a.position,a.created_at',
+        );
+        $quizzes->execute(['lesson_id' => $lessonId, 'family_id' => $familyId]);
+        $studentQuizzes = array_map(
+            static fn(array $row): array => [
+                'id' => $row['id'],
+                'title' => $row['title'],
+                'question' => [
+                    'id' => $row['question_id'],
+                    'prompt' => $row['prompt'],
+                    'questionType' => $row['question_type'],
+                    'options' => $row['options_json']
+                        ? json_decode((string) $row['options_json'], true, flags: JSON_THROW_ON_ERROR)
+                        : [],
+                ],
+            ],
+            $quizzes->fetchAll(),
+        );
+        $homeworks = $db->prepare(
+            'SELECT a.id,a.title,a.instructions,hs.id AS submission_id,hs.response_text,hs.status,(SELECT sr.comment FROM submission_reviews sr WHERE sr.submission_id=hs.id ORDER BY sr.created_at DESC LIMIT 1) AS review_comment,(SELECT sr.grade FROM submission_reviews sr WHERE sr.submission_id=hs.id ORDER BY sr.created_at DESC LIMIT 1) AS review_grade FROM activities a LEFT JOIN homework_submissions hs ON hs.activity_id=a.id AND hs.student_id=:student_id WHERE a.lesson_id=:lesson_id AND a.family_id=:family_id AND a.activity_type=\'open_work\' AND a.deleted_at IS NULL ORDER BY a.position,a.created_at',
+        );
+        $homeworks->execute(['student_id' => $studentId, 'lesson_id' => $lessonId, 'family_id' => $familyId]);
+        $studentHomeworks = array_map(
+            static fn(array $r): array => [
+                'id' => $r['id'],
+                'title' => $r['title'],
+                'instructions' => $r['instructions'],
+                'submission' => $r['submission_id']
+                    ? [
+                        'id' => $r['submission_id'],
+                        'responseText' => $r['response_text'],
+                        'status' => $r['status'],
+                        'reviewComment' => $r['review_comment'],
+                        'reviewGrade' => $r['review_grade'] === null ? null : (int) $r['review_grade'],
+                    ]
+                    : null,
+            ],
+            $homeworks->fetchAll(),
+        );
+        foreach ($studentHomeworks as &$homework) {
+            if ($homework['submission']) {
+                $files = $db->prepare(
+                    'SELECT id,original_name,mime_type,size_bytes FROM submission_files WHERE submission_id=:submission_id ORDER BY created_at',
+                );
+                $files->execute(['submission_id' => $homework['submission']['id']]);
+                $homework['submission']['files'] = array_map(
+                    static fn(array $f): array => [
+                        'id' => $f['id'],
+                        'originalName' => $f['original_name'],
+                        'mimeType' => $f['mime_type'],
+                        'sizeBytes' => (int) $f['size_bytes'],
+                        'url' => '/api/v1/submission-files/' . $f['id'],
+                    ],
+                    $files->fetchAll(),
+                );
+            }
+        }
         unset($homework);
-        Http::json(['lesson' => self::lessonSummary($lesson) + ['blocks' => $lesson['blocks'], 'quizzes'=>$studentQuizzes, 'homeworks'=>$studentHomeworks, 'reflection' => $savedReflection ? ['feeling' => $savedReflection['feeling'], 'comment' => $savedReflection['comment']] : null]]);
+        Http::json([
+            'lesson' => self::lessonSummary($lesson) + [
+                'blocks' => $lesson['blocks'],
+                'quizzes' => $studentQuizzes,
+                'homeworks' => $studentHomeworks,
+                'reflection' => $savedReflection
+                    ? ['feeling' => $savedReflection['feeling'], 'comment' => $savedReflection['comment']]
+                    : null,
+            ],
+        ]);
     }
 
     private static function saveProgress(PDO $db, string $familyId, string $studentId, string $lessonId): never
@@ -156,7 +242,9 @@ final class StudentLearningApi
         self::assignedLesson($db, $familyId, $studentId, $lessonId);
         $body = Http::body();
         $lastBlockPosition = (int) ($body['lastBlockPosition'] ?? 0);
-        if ($lastBlockPosition < 0) Http::error('validation_error', 'Некорректная позиция блока', 422);
+        if ($lastBlockPosition < 0) {
+            Http::error('validation_error', 'Некорректная позиция блока', 422);
+        }
         $completed = ($body['completed'] ?? false) === true;
         $status = $completed ? 'completed' : 'in_progress';
         $id = Uuid::v4();
@@ -165,27 +253,54 @@ final class StudentLearningApi
              VALUES (:id, :family_id, :student_id, :lesson_id, :status, :position, :completed_at)
              ON DUPLICATE KEY UPDATE status = VALUES(status),
                  last_block_position = GREATEST(last_block_position, VALUES(last_block_position)),
-                 completed_at = CASE WHEN VALUES(status) = \'completed\' THEN COALESCE(completed_at, NOW()) ELSE completed_at END'
+                 completed_at = CASE WHEN VALUES(status) = \'completed\' THEN COALESCE(completed_at, NOW()) ELSE completed_at END',
         )->execute([
-            'id' => $id, 'family_id' => $familyId, 'student_id' => $studentId, 'lesson_id' => $lessonId,
-            'status' => $status, 'position' => $lastBlockPosition, 'completed_at' => $completed ? date('Y-m-d H:i:s') : null,
+            'id' => $id,
+            'family_id' => $familyId,
+            'student_id' => $studentId,
+            'lesson_id' => $lessonId,
+            'status' => $status,
+            'position' => $lastBlockPosition,
+            'completed_at' => $completed ? date('Y-m-d H:i:s') : null,
         ]);
-        Audit::record($db, $familyId, 'student', $studentId, $completed ? 'lesson.completed' : 'lesson.progressed', 'lesson', $lessonId);
+        Audit::record(
+            $db,
+            $familyId,
+            'student',
+            $studentId,
+            $completed ? 'lesson.completed' : 'lesson.progressed',
+            'lesson',
+            $lessonId,
+        );
         Http::json(['progress' => ['status' => $status, 'lastBlockPosition' => $lastBlockPosition]]);
     }
 
     private static function saveReflection(PDO $db, string $familyId, string $studentId, string $lessonId): never
     {
         $lesson = self::assignedLesson($db, $familyId, $studentId, $lessonId);
-        if ($lesson['progress_status'] !== 'completed') Http::error('lesson_not_completed', 'Сначала завершите урок', 409);
+        if ($lesson['progress_status'] !== 'completed') {
+            Http::error('lesson_not_completed', 'Сначала завершите урок', 409);
+        }
         $body = Http::body();
         $feeling = (string) ($body['feeling'] ?? '');
-        if (!in_array($feeling, ['easy', 'good', 'hard', 'need_help'], true)) Http::error('validation_error', 'Выберите оценку урока', 422);
+        if (!in_array($feeling, ['easy', 'good', 'hard', 'need_help'], true)) {
+            Http::error('validation_error', 'Выберите оценку урока', 422);
+        }
         $comment = trim((string) ($body['comment'] ?? ''));
-        if (mb_strlen($comment) > 500) Http::error('validation_error', 'Комментарий не длиннее 500 символов', 422);
+        if (mb_strlen($comment) > 500) {
+            Http::error('validation_error', 'Комментарий не длиннее 500 символов', 422);
+        }
         $id = Uuid::v4();
-        $db->prepare('INSERT INTO student_reflections (id,family_id,student_id,lesson_id,feeling,comment) VALUES (:id,:family_id,:student_id,:lesson_id,:feeling,:comment) ON DUPLICATE KEY UPDATE feeling=VALUES(feeling),comment=VALUES(comment),updated_at=NOW()')
-            ->execute(['id' => $id, 'family_id' => $familyId, 'student_id' => $studentId, 'lesson_id' => $lessonId, 'feeling' => $feeling, 'comment' => $comment === '' ? null : $comment]);
+        $db->prepare(
+            'INSERT INTO student_reflections (id,family_id,student_id,lesson_id,feeling,comment) VALUES (:id,:family_id,:student_id,:lesson_id,:feeling,:comment) ON DUPLICATE KEY UPDATE feeling=VALUES(feeling),comment=VALUES(comment),updated_at=NOW()',
+        )->execute([
+            'id' => $id,
+            'family_id' => $familyId,
+            'student_id' => $studentId,
+            'lesson_id' => $lessonId,
+            'feeling' => $feeling,
+            'comment' => $comment === '' ? null : $comment,
+        ]);
         Audit::record($db, $familyId, 'student', $studentId, 'lesson.reflected', 'lesson', $lessonId);
         Http::json(['reflection' => ['feeling' => $feeling, 'comment' => $comment === '' ? null : $comment]]);
     }
@@ -207,11 +322,13 @@ final class StudentLearningApi
              JOIN lessons l ON l.topic_id = t.id AND l.deleted_at IS NULL
              LEFT JOIN lesson_progress lp ON lp.lesson_id = l.id AND lp.student_id = c.student_id
              WHERE c.student_id = :student_id AND c.family_id = :family_id AND l.id = :lesson_id
-                   AND c.is_active = TRUE AND c.deleted_at IS NULL LIMIT 1'
+                   AND c.is_active = TRUE AND c.deleted_at IS NULL LIMIT 1',
         );
         $statement->execute(['student_id' => $studentId, 'family_id' => $familyId, 'lesson_id' => $lessonId]);
         $lesson = $statement->fetch();
-        if (!$lesson) Http::error('not_found', 'Урок не найден в вашей программе', 404);
+        if (!$lesson) {
+            Http::error('not_found', 'Урок не найден в вашей программе', 404);
+        }
         return $lesson;
     }
 
@@ -219,11 +336,18 @@ final class StudentLearningApi
     private static function lessonSummary(array $row): array
     {
         return [
-            'id' => $row['id'], 'title' => $row['title'], 'summary' => $row['summary'],
+            'id' => $row['id'],
+            'title' => $row['title'],
+            'summary' => $row['summary'],
             'estimatedMinutes' => $row['estimated_minutes'] === null ? null : (int) $row['estimated_minutes'],
-            'subjectTitle' => $row['subject_title'], 'subjectColor' => $row['subject_color'],
-            'sectionTitle' => $row['section_title'], 'topicTitle' => $row['topic_title'],
-            'progress' => ['status' => $row['progress_status'], 'lastBlockPosition' => (int) $row['last_block_position']],
+            'subjectTitle' => $row['subject_title'],
+            'subjectColor' => $row['subject_color'],
+            'sectionTitle' => $row['section_title'],
+            'topicTitle' => $row['topic_title'],
+            'progress' => [
+                'status' => $row['progress_status'],
+                'lastBlockPosition' => (int) $row['last_block_position'],
+            ],
             'blockCount' => (int) $row['block_count'],
         ];
     }
@@ -231,13 +355,27 @@ final class StudentLearningApi
     /** @param array<string,mixed> $row */
     private static function planStatus(array $row): string
     {
-        if((int)$row['revision_count']>0)return 'needs_revision';
-        if((int)$row['submitted_count']>0)return 'submitted';
-        $homeworkCount=(int)$row['homework_count'];$quizCount=(int)$row['quiz_count'];
-        $allHomeworkDone=$homeworkCount===0||(int)$row['reviewed_count']===$homeworkCount;
-        $allQuizzesDone=$quizCount===0||(int)$row['attempted_quiz_count']===$quizCount;
-        if($row['progress_status']==='completed'&&$allHomeworkDone&&$allQuizzesDone)return 'reviewed';
-        if($row['progress_status']!=='not_started'||(int)$row['draft_count']>0||(int)$row['reviewed_count']>0||(int)$row['attempted_quiz_count']>0)return 'in_progress';
+        if ((int) $row['revision_count'] > 0) {
+            return 'needs_revision';
+        }
+        if ((int) $row['submitted_count'] > 0) {
+            return 'submitted';
+        }
+        $homeworkCount = (int) $row['homework_count'];
+        $quizCount = (int) $row['quiz_count'];
+        $allHomeworkDone = $homeworkCount === 0 || (int) $row['reviewed_count'] === $homeworkCount;
+        $allQuizzesDone = $quizCount === 0 || (int) $row['attempted_quiz_count'] === $quizCount;
+        if ($row['progress_status'] === 'completed' && $allHomeworkDone && $allQuizzesDone) {
+            return 'reviewed';
+        }
+        if (
+            $row['progress_status'] !== 'not_started' ||
+            (int) $row['draft_count'] > 0 ||
+            (int) $row['reviewed_count'] > 0 ||
+            (int) $row['attempted_quiz_count'] > 0
+        ) {
+            return 'in_progress';
+        }
         return 'assigned';
     }
 }

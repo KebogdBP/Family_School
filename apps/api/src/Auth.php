@@ -28,12 +28,14 @@ final class Auth
 
         $statement = $db->prepare(
             'SELECT id, family_id, user_id, student_id, role, expires_at
-             FROM sessions WHERE token_hash = :token_hash AND expires_at > NOW() LIMIT 1'
+             FROM sessions WHERE token_hash = :token_hash AND expires_at > NOW() LIMIT 1',
         );
         $statement->execute(['token_hash' => hash('sha256', $token)]);
         $session = $statement->fetch();
 
-        if (!$session) Http::error('unauthorized', 'Требуется вход', 401);
+        if (!$session) {
+            Http::error('unauthorized', 'Требуется вход', 401);
+        }
 
         $db->prepare('UPDATE sessions SET last_seen_at = NOW() WHERE id = :id')->execute(['id' => $session['id']]);
         return $session;
@@ -52,7 +54,7 @@ final class Auth
 
         $statement = $db->prepare(
             'INSERT INTO sessions (id, token_hash, family_id, user_id, student_id, role, expires_at)
-             VALUES (:id, :token_hash, :family_id, :user_id, :student_id, :role, :expires_at)'
+             VALUES (:id, :token_hash, :family_id, :user_id, :student_id, :role, :expires_at)',
         );
         $statement->execute([
             'id' => Uuid::v4(),

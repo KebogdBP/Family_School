@@ -8,10 +8,12 @@
   "scripts": {
     "dev": "npm run dev --workspace=@homeedu/web",
     "build": "npm run build --workspace=@homeedu/web",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint": "npm run lint --workspace=@homeedu/web",
     "typecheck": "npm run typecheck --workspace=@homeedu/web",
     "test": "npm run test --workspace=@homeedu/web",
-    "test:quality": "npm run lint && npm run typecheck && npm test && npm run check:php && npm run build",
+    "test:quality": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run check:php && npm run build",
     "test:api:integration": "node scripts/integration-api.mjs",
     "test:api:logging": "node scripts/test-safe-logging.mjs",
     "test:e2e:prepare": "node scripts/prepare-e2e.mjs",
@@ -26,6 +28,8 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.55.0",
-    "php-parser": "^3.7.0"
+    "@prettier/plugin-php": "^0.24.0",
+    "php-parser": "^3.7.0",
+    "prettier": "^3.6.2"
   }
 }

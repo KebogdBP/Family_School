@@ -54,9 +54,10 @@ Frontend обращается к API по пути `/api/v1`. В production web-
 
 ```bash
 npm run test:quality
+npm run format
 ```
 
-Команда последовательно запускает ESLint, проверку TypeScript, быстрые frontend-тесты, проверку синтаксиса PHP и production-сборку. `npm test` запускает только быстрые тесты Vitest.
+`test:quality` последовательно проверяет форматирование, ESLint, TypeScript, быстрые frontend-тесты, синтаксис PHP и production-сборку. `format` приводит TypeScript, CSS, Markdown, JSON и PHP к единому стилю. `npm test` запускает только быстрые тесты Vitest.
 
 После запуска API на чистой тестовой базе полный сценарий авторизации можно проверить командой:
 

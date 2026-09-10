@@ -17,4 +17,3 @@ export const useAuthStore = create<AuthState>((set) => ({
   principal: null,
   setPrincipal: (principal) => set({ principal }),
 }))
-

@@ -29,7 +29,7 @@ final class RateLimiter
              ON DUPLICATE KEY UPDATE
                attempts = IF(window_started_at < DATE_SUB(NOW(), INTERVAL 15 MINUTE), 1, attempts + 1),
                window_started_at = IF(window_started_at < DATE_SUB(NOW(), INTERVAL 15 MINUTE), NOW(), window_started_at),
-               locked_until = IF(attempts >= 4, DATE_ADD(NOW(), INTERVAL 15 MINUTE), locked_until)'
+               locked_until = IF(attempts >= 4, DATE_ADD(NOW(), INTERVAL 15 MINUTE), locked_until)',
         );
         $statement->execute(['hash' => $hash]);
     }
@@ -40,4 +40,3 @@ final class RateLimiter
         $statement->execute(['hash' => hash('sha256', $identity)]);
     }
 }
-

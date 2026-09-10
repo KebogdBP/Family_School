@@ -10,7 +10,9 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], ...(process.env.CI ? {} : { channel: 'chrome' }) } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], ...(process.env.CI ? {} : { channel: 'chrome' }) } },
+  ],
   webServer: {
     command: 'npm run dev --workspace=@homeedu/web -- --host 127.0.0.1',
     url: 'http://127.0.0.1:5173/login',

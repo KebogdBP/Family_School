@@ -32,4 +32,3 @@ final class Database
         return self::$connection;
     }
 }
-

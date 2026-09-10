@@ -26,21 +26,27 @@ final class Logger
             'fingerprint' => substr(hash('sha256', $error::class . "\0" . $error->getMessage()), 0, 16),
         ];
 
-        error_log((string) json_encode(array_filter(
-            $record,
-            static fn (mixed $value): bool => $value !== null && $value !== '',
-        ), JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+        error_log(
+            (string) json_encode(
+                array_filter($record, static fn(mixed $value): bool => $value !== null && $value !== ''),
+                JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
+            ),
+        );
     }
 
     private static function text(mixed $value, int $limit): ?string
     {
-        if (!is_string($value) || $value === '') return null;
+        if (!is_string($value) || $value === '') {
+            return null;
+        }
         return mb_substr(preg_replace('/[\r\n\t]/u', ' ', $value) ?? '', 0, $limit);
     }
 
     private static function path(mixed $value): ?string
     {
-        if (!is_string($value) || $value === '') return null;
+        if (!is_string($value) || $value === '') {
+            return null;
+        }
         $path = parse_url($value, PHP_URL_PATH);
         return is_string($path) ? self::text($path, 240) : null;
     }

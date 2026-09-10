@@ -13,7 +13,8 @@ final class Uuid
         $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
         $hex = bin2hex($bytes);
 
-        return sprintf('%s-%s-%s-%s-%s',
+        return sprintf(
+            '%s-%s-%s-%s-%s',
             substr($hex, 0, 8),
             substr($hex, 8, 4),
             substr($hex, 12, 4),
@@ -22,4 +23,3 @@ final class Uuid
         );
     }
 }
-
