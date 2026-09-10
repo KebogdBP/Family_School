@@ -4,8 +4,11 @@ import type { Achievement, LessonProgressStatus, MasterySubject, MasteryTopic, P
 export type AvailableLesson = { id: string; title: string; subjectTitle: string; subjectColor: string }
 export type PlanItem = AvailableLesson & { id: string; lessonId: string; scheduledDate: string; isRequired: boolean; position: number; progressStatus: LessonProgressStatus; planStatus: PlanItemStatus }
 export type WeeklyPlan = { weekStart: string; weekEnd: string; availableLessons: AvailableLesson[]; items: PlanItem[] }
+export type PlanDraftItem = { lessonId: string; title: string; subjectTitle: string; subjectColor: string; topicTitle: string; scheduledDate: string; isRequired: boolean; reason: string }
+export type PlanDraft = { weekStart: string; weekEnd: string; items: PlanDraftItem[] }
 
 export const getWeeklyPlan = (studentId: string, weekStart: string) => api<WeeklyPlan>(`/students/${studentId}/weekly-plan?weekStart=${weekStart}`)
+export const getPlanDraft = (studentId: string, weekStart: string) => api<PlanDraft>(`/students/${studentId}/plan-draft?weekStart=${weekStart}`)
 export const addPlanItem = (studentId: string, input: { lessonId: string; scheduledDate: string; isRequired: boolean; position: number }) => api<{ planItem: { id: string } }>(`/students/${studentId}/plan-items`, { method: 'POST', body: JSON.stringify(input) })
 export const deletePlanItem = (id: string) => api<{ status: string }>(`/plan-items/${id}`, { method: 'DELETE' })
 

@@ -17,6 +17,8 @@ final class PlanningApi
         match (true) {
             $method === 'GET' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/weekly-plan$#', $path, $m) === 1
                 => self::getPlan($db, $familyId, $m[1]),
+            $method === 'GET' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/plan-draft$#', $path, $m) === 1
+                => self::planDraft($db, $familyId, $m[1]),
             $method === 'GET' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/progress-report$#', $path, $m) === 1
                 => self::progressReport($db, $familyId, $m[1]),
             $method === 'GET' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/topics/([0-9a-f-]{36})/review-questions$#', $path, $m) === 1
@@ -31,6 +33,14 @@ final class PlanningApi
                 => self::rescheduleReview($db, $familyId, $actorId, $m[1]),
             default => Http::error('not_found', 'Маршрут не найден', 404),
         };
+    }
+
+    private static function planDraft(PDO $db,string $familyId,string $studentId): never
+    {
+        self::assertStudent($db,$familyId,$studentId);$weekStart=self::weekStart((string)($_GET['weekStart']??date('Y-m-d')));$start=$weekStart->format('Y-m-d');
+        $s=$db->prepare('SELECT l.id,l.title,s.title AS subject_title,s.color AS subject_color,t.title AS topic_title,COALESCE(lp.status,\'not_started\') AS progress_status,COALESCE(ms.status,\'available\') AS mastery_status FROM curricula c JOIN curriculum_subjects cs ON cs.curriculum_id=c.id JOIN subjects s ON s.id=cs.subject_id JOIN sections se ON se.curriculum_subject_id=cs.id AND se.deleted_at IS NULL JOIN topics t ON t.section_id=se.id AND t.deleted_at IS NULL JOIN lessons l ON l.topic_id=t.id AND l.deleted_at IS NULL LEFT JOIN lesson_progress lp ON lp.lesson_id=l.id AND lp.student_id=c.student_id LEFT JOIN mastery_states ms ON ms.topic_id=t.id AND ms.student_id=c.student_id WHERE c.family_id=:family_id AND c.student_id=:student_id AND c.is_active=TRUE AND c.deleted_at IS NULL AND COALESCE(lp.status,\'not_started\')<>\'completed\' AND NOT EXISTS (SELECT 1 FROM weekly_plans wp JOIN plan_items pi ON pi.weekly_plan_id=wp.id WHERE wp.student_id=c.student_id AND pi.lesson_id=l.id AND pi.scheduled_date BETWEEN :week_start AND :week_end) ORDER BY CASE WHEN lp.status=\'in_progress\' THEN 0 WHEN ms.status=\'needs_reinforcement\' THEN 1 ELSE 2 END,cs.position,se.position,t.position,l.position LIMIT 5');$s->execute(['family_id'=>$familyId,'student_id'=>$studentId,'week_start'=>$start,'week_end'=>$weekStart->modify('+6 days')->format('Y-m-d')]);$rows=$s->fetchAll();
+        $items=[];foreach($rows as $index=>$row){$reason=$row['progress_status']==='in_progress'?'продолжить начатый урок':($row['mastery_status']==='needs_reinforcement'?'тема требует закрепления':'следующий доступный урок');$items[]=['lessonId'=>$row['id'],'title'=>$row['title'],'subjectTitle'=>$row['subject_title'],'subjectColor'=>$row['subject_color'],'topicTitle'=>$row['topic_title'],'scheduledDate'=>$weekStart->modify('+'.min($index,4).' days')->format('Y-m-d'),'isRequired'=>$index<3,'reason'=>$reason];}
+        Http::json(['weekStart'=>$start,'weekEnd'=>$weekStart->modify('+6 days')->format('Y-m-d'),'items'=>$items]);
     }
 
     private static function getPlan(PDO $db, string $familyId, string $studentId): never
