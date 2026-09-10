@@ -1,10 +1,15 @@
 import { expect, request, test, type APIRequestContext, type Page } from '@playwright/test'
+import AxeBuilder from '@axe-core/playwright'
 
 const parent = { email: 'parent-e2e@homeedu.test', password: 'HomeEdu-e2e-2026!' }
 type Child = { id: string; name: string; pin: string; lessonId: string; lessonTitle: string; answer: string }
 let api: APIRequestContext
 let children: Child[] = []
 const endpoint = (path: string) => `/api/v1${path}`
+const expectAccessible = async (page: Page) => {
+  const result = await new AxeBuilder({ page }).analyze()
+  expect(result.violations.filter((item) => item.impact === 'critical' || item.impact === 'serious')).toEqual([])
+}
 
 async function parentLogin(page: Page) {
   await page.goto('/login')
@@ -24,8 +29,10 @@ async function childLogin(page: Page, child: Child) {
 
 async function completeChildCycle(page: Page, child: Child) {
   await childLogin(page, child)
+  await expectAccessible(page)
   await page.getByRole('link', { name: 'Диагностика' }).click()
   await expect(page.getByRole('heading', { name: /стартовая проверка/i })).toBeVisible()
+  await expectAccessible(page)
   for (const question of await page.locator('fieldset').all()) await question.locator('label').first().click()
   await page.getByRole('button', { name: 'Завершить диагностику' }).click()
   await expect(page.getByText('Рекомендуемый первый шаг')).toBeVisible()
@@ -37,6 +44,7 @@ async function completeChildCycle(page: Page, child: Child) {
   while (await page.getByRole('button', { name: /^(Дальше →|Завершить урок)$/ }).count()) {
     await page.getByRole('button', { name: /^(Дальше →|Завершить урок)$/ }).click()
   }
+  await expectAccessible(page)
   const quiz = page.locator('.student-quiz')
   if (child.answer === 'first-option') await quiz.locator('label').first().click()
   else await quiz.getByLabel('Твой ответ').fill(child.answer)
@@ -52,7 +60,14 @@ async function completeChildCycle(page: Page, child: Child) {
   await page.getByRole('button', { name: 'Выйти' }).click()
 
   await parentLogin(page)
+  await expectAccessible(page)
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'Перейти к содержимому' })).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('#main-content')).toBeFocused()
   await page.getByRole('link', { name: 'Проверка работ' }).click()
+  await expectAccessible(page)
   const review = page.locator('.review-card').filter({ hasText: child.name }).filter({ hasText: child.lessonTitle })
   await review.getByLabel('Комментарий').fill('Решение проверено в браузерном сценарии.')
   await review.getByLabel('Ребёнок самостоятельно объяснил ход решения').check()
@@ -87,6 +102,7 @@ test('Сара и Давид проходят полный учебный цик
   await parentLogin(page)
   await page.goto('/несуществующая-страница')
   await expect(page.getByRole('heading', { name: 'Такой страницы нет' })).toBeVisible()
+  await expectAccessible(page)
   await page.getByRole('link', { name: 'Вернуться в кабинет' }).click()
   const davidCard = page.locator('.child-card').filter({ hasText: 'Давид' })
   await davidCard.getByRole('link', { name: 'План недели' }).click()

@@ -87,7 +87,7 @@ function SetupPage() {
 }
 
 function AuthLayout({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
-  return <main className="auth-page"><section className="auth-card"><div className="brand brand-dark">Home<span>Edu</span></div><p className="eyebrow">Семейное образование</p><h1>{title}</h1><p className="muted">{subtitle}</p>{children}</section></main>
+  return <main id="main-content" className="auth-page"><section className="auth-card"><div className="brand brand-dark">Home<span>Edu</span></div><p className="eyebrow">Семейное образование</p><h1>{title}</h1><p className="muted">{subtitle}</p>{children}</section></main>
 }
 
 function AppShell({ principal, children }: { principal: Principal; children: ReactNode }) {
@@ -95,7 +95,7 @@ function AppShell({ principal, children }: { principal: Principal; children: Rea
   const client = useQueryClient()
   const setPrincipal = useAuthStore((state) => state.setPrincipal)
   const exit = useMutation({ mutationFn: logout, onSettled: () => { setPrincipal(null); client.clear(); void navigate('/login', { replace: true }) } })
-  return <div className="app-shell"><aside className="sidebar"><div className="brand">Home<span>Edu</span></div><nav>{principal.role === 'parent' ? <><NavLink to="/children">Дети</NavLink><NavLink to="/reviews">Проверка работ</NavLink></> : <><NavLink to="/today">Сегодня</NavLink><NavLink to="/diagnostic">Диагностика</NavLink><NavLink to="/progress">Прогресс</NavLink><NavLink to="/achievements">Достижения</NavLink></>}</nav><div className="account"><strong>{principal.displayName}</strong><small>{principal.role === 'parent' ? 'Родитель' : `${principal.grade} класс`}</small><button className="button-secondary" onClick={() => exit.mutate()}>Выйти</button></div></aside><main>{children}</main></div>
+  return <div className="app-shell"><a className="skip-link" href="#main-content" onClick={() => setTimeout(() => document.getElementById('main-content')?.focus())}>Перейти к содержимому</a><aside className="sidebar"><div className="brand">Home<span>Edu</span></div><nav aria-label="Основная навигация">{principal.role === 'parent' ? <><NavLink to="/children">Дети</NavLink><NavLink to="/reviews">Проверка работ</NavLink></> : <><NavLink to="/today">Сегодня</NavLink><NavLink to="/diagnostic">Диагностика</NavLink><NavLink to="/progress">Прогресс</NavLink><NavLink to="/achievements">Достижения</NavLink></>}</nav><div className="account"><strong>{principal.displayName}</strong><small>{principal.role === 'parent' ? 'Родитель' : `${principal.grade} класс`}</small><button className="button-secondary" onClick={() => exit.mutate()}>Выйти</button></div></aside><main id="main-content" tabIndex={-1}>{children}</main></div>
 }
 
 function CreateStudentForm({ onDone }: { onDone: () => void }) {
