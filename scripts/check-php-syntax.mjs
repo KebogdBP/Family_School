@@ -15,7 +15,7 @@ function phpFiles(directory) {
   })
 }
 
-for (const file of phpFiles('apps/api')) {
+for (const file of [...phpFiles('apps/api'), ...phpFiles('deploy')]) {
   parser.parseCode(fs.readFileSync(file, 'utf8'), file)
   process.stdout.write(`OK ${file}\n`)
 }

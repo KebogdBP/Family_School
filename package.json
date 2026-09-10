@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "npm run dev --workspace=@homeedu/web",
     "build": "npm run build --workspace=@homeedu/web",
+    "build:beget": "node scripts/build-beget-release.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "npm run lint --workspace=@homeedu/web",

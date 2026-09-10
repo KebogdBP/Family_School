@@ -317,10 +317,7 @@ final class HomeworkApi
         }
         $id = Uuid::v4();
         $storageName = $id . '.' . $allowed[$mime];
-        $directory = dirname(__DIR__) . '/storage/uploads';
-        if (!is_dir($directory) && !mkdir($directory, 0700, true) && !is_dir($directory)) {
-            throw new \RuntimeException('Не удалось создать каталог загрузок');
-        }
+        $directory = Storage::ensureUploadsPath();
         $target = $directory . '/' . $storageName;
         if (!move_uploaded_file($tmp, $target)) {
             throw new \RuntimeException('Не удалось сохранить файл');
@@ -381,7 +378,7 @@ final class HomeworkApi
     private static function downloadFile(PDO $db, array $session, string $id): never
     {
         $row = self::fileRecord($db, $session, $id);
-        $path = dirname(__DIR__) . '/storage/uploads/' . $row['storage_name'];
+        $path = Storage::uploadPath((string) $row['storage_name']);
         if (!is_file($path)) {
             Http::error('not_found', 'Файл отсутствует в хранилище', 404);
         }
@@ -405,7 +402,7 @@ final class HomeworkApi
             Http::error('submission_locked', 'Работа уже отправлена', 409);
         }
         $db->prepare('DELETE FROM submission_files WHERE id=:id')->execute(['id' => $id]);
-        $path = dirname(__DIR__) . '/storage/uploads/' . $row['storage_name'];
+        $path = Storage::uploadPath((string) $row['storage_name']);
         if (is_file($path)) {
             unlink($path);
         }

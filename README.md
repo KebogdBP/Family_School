@@ -39,6 +39,7 @@ docker compose exec api php bin/migrate.php
 npm run test:api:integration
 npm run test:e2e
 npm run test:backup-restore
+npm run build:beget
 npm run test:api:logging
 ```
 
@@ -81,3 +82,4 @@ HOMEEDU_SETUP_TOKEN=development-setup-token npm run test:api:integration
 - `docs/data-model.md` — модель данных и инварианты доступа;
 - `docs/IMPLEMENTATION_STATUS.md` — фактическое состояние реализации.
 - `docs/BACKUP_RESTORE.md` — создание, проверка и восстановление резервных копий MySQL и приватных файлов.
+- `docs/DEPLOY_BEGET.md` — production-сборка, безопасная конфигурация, миграции и откат на Beget.

@@ -21,6 +21,7 @@ jobs:
       - run: npm test
       - run: npm run check:php
       - run: npm run build
+      - run: npm run build:beget
 
   api:
     runs-on: ubuntu-latest

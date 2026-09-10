@@ -3,6 +3,7 @@ apps/web/dist/
 coverage/
 playwright-report/
 test-results/
+release/
 apps/api/storage/uploads/
 *.sql
 *.lock

@@ -18,6 +18,7 @@ use HomeEdu\QuizApi;
 use HomeEdu\RateLimiter;
 use HomeEdu\ReviewApi;
 use HomeEdu\StudentLearningApi;
+use HomeEdu\Storage;
 use HomeEdu\Uuid;
 
 require dirname(__DIR__) . '/bootstrap.php';
@@ -412,10 +413,9 @@ function deleteStudent(PDO $db, string $studentId): never
         throw $error;
     }
 
-    $directory = dirname(__DIR__) . '/storage/uploads';
     $failedFiles = 0;
     foreach ($storageNames as $storageName) {
-        $path = $directory . '/' . basename((string) $storageName);
+        $path = Storage::uploadPath((string) $storageName);
         if (is_file($path) && !unlink($path)) {
             $failedFiles++;
         }
