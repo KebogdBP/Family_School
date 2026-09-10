@@ -43,6 +43,7 @@ try {
         $method === 'GET' && $path === '/api/v1/students' => listStudents($db),
         $method === 'POST' && $path === '/api/v1/students' => createStudent($db),
         $method === 'PATCH' && preg_match('#^/api/v1/students/([0-9a-f-]{36})/pin$#', $path, $matches) === 1 => updateStudentPin($db, $matches[1]),
+        $method === 'DELETE' && preg_match('#^/api/v1/students/([0-9a-f-]{36})$#', $path, $matches) === 1 => deleteStudent($db, $matches[1]),
         preg_match('#^/api/v1/(student/lessons/[0-9a-f-]{36}/ai-hints|lessons/[0-9a-f-]{36}/ai-quiz-drafts|ai-quiz-drafts/[0-9a-f-]{36}/approve)$#',$path)===1 => AiApi::dispatch($db,$method,$path),
         preg_match('#^/api/v1/(lessons/[0-9a-f-]{36}/quizzes|quizzes/[0-9a-f-]{36}|student/quizzes/[0-9a-f-]{36}/attempts)$#', $path) === 1 => QuizApi::dispatch($db, $method, $path),
         preg_match('#^/api/v1/student/reviews/[0-9a-f-]{36}$#', $path) === 1 => ReviewApi::dispatch($db, $method, $path),
@@ -286,4 +287,51 @@ function updateStudentPin(PDO $db, string $studentId): never
     $db->prepare('DELETE FROM sessions WHERE student_id = :student_id')->execute(['student_id' => $studentId]);
     Audit::record($db, $session['family_id'], 'parent', $session['user_id'], 'student.pin_changed', 'student', $studentId);
     Http::json(['status' => 'ok']);
+}
+
+function deleteStudent(PDO $db, string $studentId): never
+{
+    $session = Auth::requireRole($db, 'parent');
+    $body = Http::body();
+    $password = (string) ($body['password'] ?? '');
+    $confirmation = trim((string) ($body['confirmation'] ?? ''));
+
+    $studentStatement = $db->prepare('SELECT display_name FROM students WHERE id=:id AND family_id=:family_id AND deleted_at IS NULL');
+    $studentStatement->execute(['id' => $studentId, 'family_id' => $session['family_id']]);
+    $student = $studentStatement->fetch();
+    if (!$student) Http::error('not_found', 'Профиль ребёнка не найден', 404);
+    if (!hash_equals((string) $student['display_name'], $confirmation)) {
+        Http::error('confirmation_mismatch', 'Введите имя ребёнка точно так, как оно указано в профиле', 422);
+    }
+
+    $parentStatement = $db->prepare('SELECT password_hash FROM users WHERE id=:id AND family_id=:family_id AND deleted_at IS NULL');
+    $parentStatement->execute(['id' => $session['user_id'], 'family_id' => $session['family_id']]);
+    $passwordHash = $parentStatement->fetchColumn();
+    if (!is_string($passwordHash) || !password_verify($password, $passwordHash)) {
+        Http::error('invalid_password', 'Неверный пароль родителя', 401);
+    }
+
+    $files = $db->prepare('SELECT sf.storage_name FROM submission_files sf JOIN homework_submissions hs ON hs.id=sf.submission_id WHERE hs.student_id=:student_id AND hs.family_id=:family_id FOR UPDATE');
+    $db->beginTransaction();
+    try {
+        $files->execute(['student_id' => $studentId, 'family_id' => $session['family_id']]);
+        $storageNames = array_column($files->fetchAll(), 'storage_name');
+        Audit::record($db, $session['family_id'], 'parent', $session['user_id'], 'student.deleted', 'student', $studentId, ['deletedFileCount' => count($storageNames)]);
+        $delete = $db->prepare('DELETE FROM students WHERE id=:id AND family_id=:family_id');
+        $delete->execute(['id' => $studentId, 'family_id' => $session['family_id']]);
+        if ($delete->rowCount() !== 1) throw new RuntimeException('Профиль ребёнка не был удалён');
+        $db->commit();
+    } catch (Throwable $error) {
+        if ($db->inTransaction()) $db->rollBack();
+        throw $error;
+    }
+
+    $directory = dirname(__DIR__) . '/storage/uploads';
+    $failedFiles = 0;
+    foreach ($storageNames as $storageName) {
+        $path = $directory . '/' . basename((string) $storageName);
+        if (is_file($path) && !unlink($path)) $failedFiles++;
+    }
+    if ($failedFiles > 0) error_log("Student deletion left {$failedFiles} private file(s) for retry");
+    Http::json(['status' => 'deleted', 'deletedFiles' => count($storageNames), 'fileDeleteFailures' => $failedFiles]);
 }

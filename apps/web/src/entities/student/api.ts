@@ -25,3 +25,9 @@ export function createStudent(input: {
   })
 }
 
+export function deleteStudent(studentId: string, password: string, confirmation: string) {
+  return api<{ status: 'deleted'; deletedFiles: number; fileDeleteFailures: number }>(`/students/${studentId}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ password, confirmation }),
+  })
+}

@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs'
+
 const baseUrl = process.env.HOMEEDU_API_URL ?? 'http://127.0.0.1:8080/api/v1'
 const setupToken = process.env.HOMEEDU_SETUP_TOKEN ?? 'development-setup-token'
 let cookie = ''
@@ -369,4 +371,23 @@ await request(`/students/${david.student.id}/plan-items`, { method: 'POST', body
 const approvedDraftPlan = await request(`/students/${david.student.id}/weekly-plan?weekStart=${nextWeekStart}`)
 assert(approvedDraftPlan.items.length === 2 && approvedDraftPlan.items.some((item) => item.scheduledDate === editedDate.toISOString().slice(0,10) && !item.isRequired), 'Edited plan draft was not applied correctly')
 
-console.log('Integration OK: pilot cycles, safe AI and editable parent plan draft are verified')
+const uploadedPath = new URL(`../apps/api/storage/uploads/${uploaded.file.id}.png`, import.meta.url)
+assert(existsSync(uploadedPath), 'Private attachment is missing before profile deletion')
+const unknownDelete = await fetch(`${baseUrl}/students/00000000-0000-4000-8000-000000000000`, { method: 'DELETE', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ confirmation: 'Сара', password: 'HomeEdu-test-2026!' }) })
+assert(unknownDelete.status === 404, 'Parent could address a student outside the family scope')
+const wrongConfirmation = await fetch(`${baseUrl}/students/${sara.student.id}`, { method: 'DELETE', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ confirmation: 'сара', password: 'HomeEdu-test-2026!' }) })
+assert(wrongConfirmation.status === 422, 'Profile deletion accepted an inexact student name')
+const wrongPassword = await fetch(`${baseUrl}/students/${sara.student.id}`, { method: 'DELETE', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ confirmation: 'Сара', password: 'wrong-password' }) })
+assert(wrongPassword.status === 401, 'Profile deletion accepted an invalid parent password')
+const deletion = await request(`/students/${sara.student.id}`, { method: 'DELETE', body: JSON.stringify({ confirmation: 'Сара', password: 'HomeEdu-test-2026!' }) })
+assert(deletion.status === 'deleted' && deletion.deletedFiles === 1 && deletion.fileDeleteFailures === 0, 'Sara profile or private file was not deleted cleanly')
+assert(!existsSync(uploadedPath), 'Sara private attachment remains after profile deletion')
+const remainingStudents = await request('/students')
+assert(remainingStudents.students.length === 1 && remainingStudents.students[0].id === david.student.id, 'Deleting Sara affected David or left Sara visible')
+await request('/auth/logout', { method: 'POST' }); cookie = ''
+const deletedLogin = await fetch(`${baseUrl}/auth/student/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentId: sara.student.id, pin: '1206' }) })
+assert(deletedLogin.status === 401, 'Deleted student can still sign in')
+await request('/auth/student/login', { method: 'POST', body: JSON.stringify({ studentId: david.student.id, pin: '1004' }) })
+assert((await request('/me')).principal.displayName === 'Давид', 'Sibling profile was damaged by deletion')
+
+console.log('Integration OK: pilot cycles, safe AI, planning and secure profile deletion are verified')

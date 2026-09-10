@@ -3,7 +3,7 @@ import { type FormEvent, type ReactNode, useEffect, useState } from 'react'
 import { Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
 import { exportFamilyData, getMe, loginParent, loginStudent, logout, setupFamily, type FamilyExport } from '@/entities/auth/api'
 import { useAuthStore, type Principal } from '@/entities/auth/model'
-import { createStudent, getStudents, type Student } from '@/entities/student/api'
+import { createStudent, deleteStudent, getStudents, type Student } from '@/entities/student/api'
 import { ApiError } from '@/shared/api/client'
 import { CurriculumPage } from '@/pages/CurriculumPage'
 import { LessonEditorPage } from '@/pages/LessonEditorPage'
@@ -122,7 +122,15 @@ function StudentCard({ student, onLoggedIn }: { student: Student; onLoggedIn: (p
     mutationFn: () => loginStudent({ studentId: student.id, pin }),
     onSuccess: async () => onLoggedIn((await getMe()).principal),
   })
-  return <article className="card child-card"><div className="avatar" style={{ background: student.avatarColor }}>{student.displayName.slice(0, 1).toUpperCase()}</div><div><h2>{student.displayName}</h2><p className="muted">{student.grade} класс{student.age ? ` · ${student.age} лет` : ''}</p></div><span className="badge">Профиль ученика</span><div className="card-actions"><NavLink className="button-link button-ghost" to={`/children/${student.id}/curriculum`}>Учебная программа</NavLink><NavLink className="button-link button-ghost" to={`/children/${student.id}/plan`}>План недели</NavLink><NavLink className="button-link button-ghost" to={`/children/${student.id}/report`}>Отчёт</NavLink>{open ? <form className="pin-form" onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}><input aria-label={`PIN для ${student.displayName}`} autoFocus inputMode="numeric" pattern="[0-9]{4,8}" placeholder="Введите PIN" required value={pin} onChange={(event) => setPin(event.target.value)} /><button disabled={mutation.isPending}>Войти</button><ErrorText error={mutation.error} /></form> : <button onClick={() => setOpen(true)}>Перейти в профиль</button>}</div></article>
+  const client = useQueryClient()
+  const [deleting, setDeleting] = useState(false)
+  const [confirmation, setConfirmation] = useState('')
+  const [parentPassword, setParentPassword] = useState('')
+  const remove = useMutation({
+    mutationFn: () => deleteStudent(student.id, parentPassword, confirmation),
+    onSuccess: async () => { setDeleting(false); await client.invalidateQueries({ queryKey: ['students'] }) },
+  })
+  return <article className="card child-card"><div className="avatar" style={{ background: student.avatarColor }}>{student.displayName.slice(0, 1).toUpperCase()}</div><div><h2>{student.displayName}</h2><p className="muted">{student.grade} класс{student.age ? ` · ${student.age} лет` : ''}</p></div><span className="badge">Профиль ученика</span><div className="card-actions"><NavLink className="button-link button-ghost" to={`/children/${student.id}/curriculum`}>Учебная программа</NavLink><NavLink className="button-link button-ghost" to={`/children/${student.id}/plan`}>План недели</NavLink><NavLink className="button-link button-ghost" to={`/children/${student.id}/report`}>Отчёт</NavLink>{open ? <form className="pin-form" onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}><input aria-label={`PIN для ${student.displayName}`} autoFocus inputMode="numeric" pattern="[0-9]{4,8}" placeholder="Введите PIN" required value={pin} onChange={(event) => setPin(event.target.value)} /><button disabled={mutation.isPending}>Войти</button><ErrorText error={mutation.error} /></form> : <button onClick={() => setOpen(true)}>Перейти в профиль</button>}<button className="button-danger button-small" onClick={() => setDeleting(true)}>Удалить профиль</button></div>{deleting && <form className="delete-student-confirmation" onSubmit={(event) => { event.preventDefault(); remove.mutate() }}><h3>Удалить профиль без возможности восстановления?</h3><p>Будут удалены программа, прогресс, ответы, оценки и приватные файлы. Сначала сделайте экспорт данных, если они нужны.</p><Field label={`Введите имя «${student.displayName}»`}><input required autoComplete="off" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></Field><Field label="Пароль родителя"><input type="password" required autoComplete="current-password" value={parentPassword} onChange={(event) => setParentPassword(event.target.value)} /></Field><ErrorText error={remove.error} /><div className="form-row"><button type="button" className="button-ghost" onClick={() => setDeleting(false)}>Отмена</button><button className="button-danger" disabled={confirmation !== student.displayName || !parentPassword || remove.isPending}>{remove.isPending ? 'Удаляем…' : `Удалить ${student.displayName}`}</button></div></form>}</article>
 }
 
 function ChildrenPage() {
