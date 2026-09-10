@@ -91,10 +91,22 @@ h2 { margin-bottom: 4px; }
 .plan-draft-list { display: grid; gap: 10px; }
 .plan-draft-list article { display: grid; grid-template-columns: minmax(220px,1fr) auto auto auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: white; }
 .plan-draft-list small { display: block; color: var(--muted); }
-.delete-student-confirmation { grid-column: 1 / -1; display: grid; gap: 14px; margin-top: 8px; padding: 18px; border: 1px solid #fca5a5; border-radius: 12px; background: #fff7f7; }
-.delete-student-confirmation h3, .delete-student-confirmation p { margin: 0; }
 .delete-student-confirmation { grid-column: 1 / -1; display: grid; gap: 12px; padding: 18px; border: 1px solid #fda4af; border-radius: 12px; background: #fff1f2; }
 .delete-student-confirmation h3, .delete-student-confirmation p { margin: 0; }
+.page-state { width: 100%; display: flex; align-items: center; justify-content: center; gap: 18px; padding: 30px; text-align: left; }
+.page-state h1 { font-size: 1.65rem; }
+.page-state h1, .page-state h2 { margin-bottom: 7px; }
+.page-state p:last-of-type { margin-bottom: 16px; }
+.loading-state { min-height: 120px; color: #475467; }
+.state-spinner { width: 24px; height: 24px; border: 3px solid #bfdbfe; border-top-color: #2563eb; border-radius: 50%; animation: state-spin .8s linear infinite; }
+.state-icon { flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; background: #fee4e2; color: #b42318; font-size: 1.4rem; font-weight: 850; }
+.state-icon-calm { background: #eaf2ff; color: #1d4ed8; }
+.error-state { max-width: 720px; border-color: #fda29b; background: #fffafa; }
+.full-page-state { margin: 10vh auto 0; }
+.state-code { color: #2563eb; font-size: clamp(2.5rem, 8vw, 5rem); font-weight: 900; letter-spacing: -.08em; }
+.not-found-state { max-width: 720px; margin: 8vh auto 0; }
+@keyframes state-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .state-spinner { animation: none; } }
 @media (max-width: 720px) {
   .plan-draft-intro { align-items: stretch; flex-direction: column; }
   .plan-draft-list article { grid-template-columns: 1fr; }

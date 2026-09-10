@@ -16,6 +16,7 @@ import { StudentAchievementsPage } from '@/pages/StudentAchievementsPage'
 import { StudentProgressPage } from '@/pages/StudentProgressPage'
 import { ReviewSessionPage } from '@/pages/ReviewSessionPage'
 import { DiagnosticPage } from '@/pages/DiagnosticPage'
+import { EmptyState, ErrorState, LoadingState, NotFoundState } from '@/shared/ui/PageState'
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
@@ -142,7 +143,7 @@ function ChildrenPage() {
   const download = (data: FamilyExport) => { const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=`homeedu-family-${data.generatedAt.slice(0,10)}.json`;document.body.append(link);link.click();link.remove();URL.revokeObjectURL(url) }
   const familyExport = useMutation({ mutationFn: exportFamilyData, onSuccess: download })
   const loggedIn = (principal: Principal) => { setPrincipal(principal); client.clear(); void navigate('/today', { replace: true }) }
-  return <><header className="page-header"><p className="eyebrow">Семейное пространство</p><div className="header-row"><div><h1>Ученики</h1><p className="muted">Выберите профиль или добавьте нового ребёнка.</p></div><div className="header-actions"><button className="button-ghost" disabled={familyExport.isPending} onClick={() => familyExport.mutate()}>{familyExport.isPending ? 'Готовим экспорт…' : 'Скачать данные'}</button><button onClick={() => setShowForm((value) => !value)}>{showForm ? 'Закрыть' : '+ Добавить ребёнка'}</button></div></div></header>{showForm && <CreateStudentForm onDone={() => { void client.invalidateQueries({ queryKey: ['students'] }); setShowForm(false) }} />}<ErrorText error={students.error ?? familyExport.error} />{students.isLoading ? <p>Загружаем профили…</p> : <section className="children-grid">{students.data?.students.map((student) => <StudentCard key={student.id} student={student} onLoggedIn={loggedIn} />)}{students.data?.students.length === 0 && <div className="card empty"><h2>Пока нет учеников</h2><p className="muted">Добавьте Сару и Давида, укажите класс и отдельный PIN для каждого.</p></div>}</section>}</>
+  return <><header className="page-header"><p className="eyebrow">Семейное пространство</p><div className="header-row"><div><h1>Ученики</h1><p className="muted">Выберите профиль или добавьте нового ребёнка.</p></div><div className="header-actions"><button className="button-ghost" disabled={familyExport.isPending} onClick={() => familyExport.mutate()}>{familyExport.isPending ? 'Готовим экспорт…' : 'Скачать данные'}</button><button onClick={() => setShowForm((value) => !value)}>{showForm ? 'Закрыть' : '+ Добавить ребёнка'}</button></div></div></header>{showForm && <CreateStudentForm onDone={() => { void client.invalidateQueries({ queryKey: ['students'] }); setShowForm(false) }} />}<ErrorText error={familyExport.error} />{students.error ? <ErrorState error={students.error} onRetry={() => void students.refetch()} /> : students.isLoading ? <LoadingState label="Загружаем профили…" /> : <section className="children-grid">{students.data?.students.map((student) => <StudentCard key={student.id} student={student} onLoggedIn={loggedIn} />)}{students.data?.students.length === 0 && <EmptyState title="Пока нет учеников" description="Добавьте первый профиль, укажите класс и отдельный PIN для входа ребёнка."><button onClick={() => setShowForm(true)}>Добавить ребёнка</button></EmptyState>}</section>}</>
 }
 
 function TodayPage({ principal }: { principal: Principal }) {
@@ -150,10 +151,11 @@ function TodayPage({ principal }: { principal: Principal }) {
   const completed = lessons.data?.lessons.filter((lesson) => lesson.progress.status === 'completed').length ?? 0
   const reviews = lessons.data?.reviewTasks ?? []
   const continuation = lessons.data?.continueLesson
-  return <><header className="page-header"><p className="eyebrow">Сегодня</p><h1>Привет, {principal.displayName}!</h1><p className="muted">{principal.grade} класс · пройдено {completed} из {lessons.data?.lessons.length ?? 0}</p></header><ErrorText error={lessons.error} />
+  return <><header className="page-header"><p className="eyebrow">Сегодня</p><h1>Привет, {principal.displayName}!</h1><p className="muted">{principal.grade} класс · пройдено {completed} из {lessons.data?.lessons.length ?? 0}</p></header>{lessons.error ? <ErrorState error={lessons.error} onRetry={() => void lessons.refetch()} /> :
+    <>
     {continuation && <section className="continue-lesson card" style={{ borderLeftColor: continuation.subjectColor }}><div><span className="badge">Продолжить занятие</span><h2>{continuation.title}</h2><p className="muted">{continuation.subjectTitle} · {continuation.topicTitle}</p><div className="progress-track"><div style={{ width: `${continuation.blockCount ? Math.round((continuation.progress.lastBlockPosition / continuation.blockCount) * 100) : 0}%`, background: continuation.subjectColor }} /></div></div><NavLink className="button-link" to={`/study/lessons/${continuation.id}`}>Продолжить →</NavLink></section>}
     {reviews.length > 0 && <section className="review-reminder card"><div><span className="badge">На сегодня</span><h2>Короткая контрольная</h2><p className="muted">Система выбрала несколько вопросов по теме.</p></div><ul>{reviews.map((task) => <li key={task.id}><strong>{task.topicTitle}</strong><span>{task.subjectTitle} · {task.reason}</span><NavLink className="button-link button-small" to={`/reviews/${task.id}`}>Начать повторение →</NavLink></li>)}</ul></section>}
-    {lessons.isLoading ? <p>Собираем план на сегодня…</p> : lessons.data?.lessons.length ? <section className="student-lessons">{lessons.data.lessons.map((lesson) => <StudentLessonCard key={lesson.planItemId} lesson={lesson} />)}</section> : reviews.length === 0 ? <section className="card empty"><h2>На сегодня всё свободно</h2><p className="muted">В плане нет уроков и повторений.</p></section> : null}
+    {lessons.isLoading ? <LoadingState label="Собираем план на сегодня…" /> : lessons.data?.lessons.length ? <section className="student-lessons">{lessons.data.lessons.map((lesson) => <StudentLessonCard key={lesson.planItemId} lesson={lesson} />)}</section> : reviews.length === 0 ? <EmptyState title="На сегодня всё свободно" description="В плане нет уроков и повторений. Можно отдохнуть или выбрать дополнительную практику вместе с родителем." /> : null}</>}
   </>
 }
 
@@ -169,7 +171,8 @@ function RoutedApp() {
   const setPrincipal = useAuthStore((state) => state.setPrincipal)
   const session = useQuery({ queryKey: ['me'], queryFn: getMe })
   useEffect(() => { if (session.data) setPrincipal(session.data.principal); if (session.error instanceof ApiError && session.error.status === 401) setPrincipal(null) }, [session.data, session.error, setPrincipal])
-  if (session.isLoading) return <main className="splash"><div className="brand brand-dark">Home<span>Edu</span></div><p>Проверяем сессию…</p></main>
+  if (session.isLoading) return <main className="splash"><div className="brand brand-dark">Home<span>Edu</span></div><LoadingState label="Проверяем сессию…" /></main>
+  if (session.error && !(session.error instanceof ApiError && session.error.status === 401)) return <main><ErrorState fullPage error={session.error} onRetry={() => void session.refetch()} /></main>
   return <Routes>
     <Route path="/login" element={principal ? <Navigate to={principal.role === 'parent' ? '/children' : '/today'} replace /> : <LoginPage />} />
     <Route path="/setup" element={principal ? <Navigate to="/children" replace /> : <SetupPage />} />
@@ -185,7 +188,7 @@ function RoutedApp() {
     <Route path="/progress" element={principal?.role === 'student' ? <AppShell principal={principal}><StudentProgressPage /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} />
     <Route path="/reviews/:reviewId" element={principal?.role === 'student' ? <AppShell principal={principal}><ReviewSessionPage /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} />
     <Route path="/study/lessons/:lessonId" element={principal?.role === 'student' ? <AppShell principal={principal}><StudentLessonPage /></AppShell> : <Navigate to={principal ? '/children' : '/login'} replace />} />
-    <Route path="*" element={<Navigate to={principal?.role === 'student' ? '/today' : principal ? '/children' : '/login'} replace />} />
+    <Route path="*" element={principal ? <AppShell principal={principal}><NotFoundState home={principal.role === 'student' ? '/today' : '/children'} /></AppShell> : <NotFoundState home="/login" />} />
   </Routes>
 }
 

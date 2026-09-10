@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { getReviewSubmissions, reviewSubmission, type ReviewSubmission } from '@/entities/homework/api'
+import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/PageState'
 
 function ReviewCard({ item, refresh }: { item: ReviewSubmission; refresh: () => Promise<unknown> }) {
   const [comment, setComment] = useState('')
@@ -18,5 +19,5 @@ export function ReviewQueuePage() {
   const client = useQueryClient()
   const queue = useQuery({ queryKey: ['review-submissions'], queryFn: getReviewSubmissions })
   const refresh = async () => { await client.invalidateQueries({ queryKey: ['review-submissions'] }) }
-  return <><header className="page-header"><p className="eyebrow">Проверка работ</p><h1>Домашние задания</h1><p className="muted">Ответы Сары и Давида, ожидающие решения родителя.</p></header>{queue.error && <p className="form-error">{queue.error.message}</p>}{queue.isLoading ? <p>Загружаем работы…</p> : queue.data?.submissions.length ? <section className="review-list">{queue.data.submissions.map((item) => <ReviewCard key={item.id} item={item} refresh={refresh} />)}</section> : <section className="card empty"><h2>Новых работ нет</h2><p className="muted">Отправленные ответы появятся здесь.</p></section>}</>
+  return <><header className="page-header"><p className="eyebrow">Проверка работ</p><h1>Домашние задания</h1><p className="muted">Ответы Сары и Давида, ожидающие решения родителя.</p></header>{queue.error ? <ErrorState error={queue.error} onRetry={() => void queue.refetch()} /> : queue.isLoading ? <LoadingState label="Загружаем работы…" /> : queue.data?.submissions.length ? <section className="review-list">{queue.data.submissions.map((item) => <ReviewCard key={item.id} item={item} refresh={refresh} />)}</section> : <EmptyState title="Новых работ нет" description="Отправленные ответы появятся здесь. Сейчас очередь проверки пуста." />}</>
 }

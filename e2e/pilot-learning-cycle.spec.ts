@@ -85,6 +85,9 @@ test.afterAll(async () => { await api?.dispose() })
 
 test('Сара и Давид проходят полный учебный цикл, а родитель утверждает план', async ({ page }) => {
   await parentLogin(page)
+  await page.goto('/несуществующая-страница')
+  await expect(page.getByRole('heading', { name: 'Такой страницы нет' })).toBeVisible()
+  await page.getByRole('link', { name: 'Вернуться в кабинет' }).click()
   const davidCard = page.locator('.child-card').filter({ hasText: 'Давид' })
   await davidCard.getByRole('link', { name: 'План недели' }).click()
   await page.getByRole('button', { name: 'Позже →' }).click()
