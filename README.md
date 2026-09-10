@@ -38,6 +38,7 @@ docker compose up -d --build
 docker compose exec api php bin/migrate.php
 npm run test:api:integration
 npm run test:e2e
+npm run test:backup-restore
 ```
 
 `test:e2e` поднимает Docker Compose, создаёт чистую тестовую базу и запускает в Chromium полный пилотный путь Сары и Давида. Команда удаляет данные только из локальной Docker-базы `homeedu`.
@@ -75,3 +76,4 @@ HOMEEDU_SETUP_TOKEN=development-setup-token npm run test:api:integration
 - `docs/api-contract.md` — контракт текущих API-маршрутов;
 - `docs/data-model.md` — модель данных и инварианты доступа;
 - `docs/IMPLEMENTATION_STATUS.md` — фактическое состояние реализации.
+- `docs/BACKUP_RESTORE.md` — создание, проверка и восстановление резервных копий MySQL и приватных файлов.

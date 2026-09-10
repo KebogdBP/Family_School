@@ -42,6 +42,7 @@ jobs:
       - run: docker compose up -d --build --wait --wait-timeout 120
       - run: docker compose exec -T api php bin/migrate.php
       - run: npm run test:api:integration
+      - run: npm run test:backup-restore
       - if: always()
         run: docker compose logs --no-color api mysql
       - if: always()
