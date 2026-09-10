@@ -13,12 +13,16 @@
     "test": "npm run test --workspace=@homeedu/web",
     "test:quality": "npm run lint && npm run typecheck && npm test && npm run check:php && npm run build",
     "test:api:integration": "node scripts/integration-api.mjs",
+    "test:e2e:prepare": "node scripts/prepare-e2e.mjs",
+    "test:e2e": "npm run test:e2e:prepare && playwright test",
     "check:php": "node scripts/check-php-syntax.mjs"
   },
   "engines": {
     "node": ">=20.19.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@playwright/test": "^1.55.0",
     "php-parser": "^3.7.0"
   }
 }

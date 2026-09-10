@@ -37,7 +37,10 @@ php -S 127.0.0.1:8080 -t apps/api/public
 docker compose up -d --build
 docker compose exec api php bin/migrate.php
 npm run test:api:integration
+npm run test:e2e
 ```
+
+`test:e2e` поднимает Docker Compose, создаёт чистую тестовую базу и запускает в Chromium полный пилотный путь Сары и Давида. Команда удаляет данные только из локальной Docker-базы `homeedu`.
 
 MySQL 8.4 работает в контейнере с отдельным volume, API доступен на `http://127.0.0.1:8080`. Пароли в `compose.yaml` предназначены только для локальной разработки и должны быть заменены при деплое.
 

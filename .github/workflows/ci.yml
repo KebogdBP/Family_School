@@ -46,3 +46,24 @@ jobs:
         run: docker compose logs --no-color api mysql
       - if: always()
         run: docker compose down -v
+
+  browser-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+      - if: always()
+        run: docker compose logs --no-color api mysql
+      - if: always()
+        run: docker compose down -v
