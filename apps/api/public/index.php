@@ -10,6 +10,7 @@ use HomeEdu\Database;
 use HomeEdu\Env;
 use HomeEdu\FamilyExportApi;
 use HomeEdu\Http;
+use HomeEdu\Logger;
 use HomeEdu\HomeworkApi;
 use HomeEdu\PlanningApi;
 use HomeEdu\PilotContentApi;
@@ -53,12 +54,17 @@ try {
         default => CurriculumApi::dispatch($db, $method, $path),
     };
 } catch (Throwable $error) {
-    error_log($error::class . ': ' . $error->getMessage());
+    Logger::exception($error, [
+        'requestId' => Http::requestId(),
+        'method' => $method,
+        'path' => $path,
+        'status' => 500,
+        'phase' => 'dispatch',
+    ]);
     Http::json(['error' => [
         'code' => 'internal_error',
-        'message' => Env::get('APP_ENV', 'production') === 'development'
-            ? $error->getMessage()
-            : 'Внутренняя ошибка сервера',
+        'message' => 'Внутренняя ошибка сервера',
+        'requestId' => Http::requestId(),
     ]], 500);
 }
 

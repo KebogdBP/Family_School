@@ -39,6 +39,7 @@ docker compose exec api php bin/migrate.php
 npm run test:api:integration
 npm run test:e2e
 npm run test:backup-restore
+npm run test:api:logging
 ```
 
 `test:e2e` поднимает Docker Compose, создаёт чистую тестовую базу и запускает в Chromium полный пилотный путь Сары и Давида. Ключевые экраны дополнительно проверяются axe на серьёзные нарушения доступности. Команда удаляет данные только из локальной Docker-базы `homeedu`.
@@ -64,6 +65,8 @@ HOMEEDU_SETUP_TOKEN=development-setup-token npm run test:api:integration
 ```
 
 Интеграционный сценарий проверяет регистрацию семьи, раздельные профили Сары и Давида, учебные маршруты, диагностику, тесты, домашние задания, файлы, проверку родителем, повторение, достижения, отчёты и запрет доступа к чужим данным. В GitHub Actions он автоматически выполняется в отдельных Docker-контейнерах PHP 8.3 и MySQL 8.4 при каждом push и pull request.
+
+Серверные ошибки пишутся в stderr как однострочный JSON. Запись содержит request ID, безопасный путь без query-параметров, класс исключения и fingerprint, но не содержит текст исключения, пароли, PIN-коды, ответы или имена детских файлов. Тот же `requestId` возвращается в заголовке `X-Request-ID` и теле ответа 500. Команда `npm run test:api:logging` проверяет эти гарантии в PHP-контейнере.
 
 ## AI Gateway
 

@@ -13,6 +13,7 @@
     "test": "npm run test --workspace=@homeedu/web",
     "test:quality": "npm run lint && npm run typecheck && npm test && npm run check:php && npm run build",
     "test:api:integration": "node scripts/integration-api.mjs",
+    "test:api:logging": "node scripts/test-safe-logging.mjs",
     "test:e2e:prepare": "node scripts/prepare-e2e.mjs",
     "test:e2e": "npm run test:e2e:prepare && playwright test",
     "db:backup:local": "node scripts/backup-mysql.mjs",

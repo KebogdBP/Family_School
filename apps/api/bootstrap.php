@@ -18,14 +18,18 @@ spl_autoload_register(static function (string $class): void {
 HomeEdu\Env::load(__DIR__ . '/.env');
 
 set_exception_handler(static function (Throwable $error): void {
-    error_log($error::class . ': ' . $error->getMessage());
+    HomeEdu\Logger::exception($error, [
+        'requestId' => HomeEdu\Http::requestId(),
+        'method' => $_SERVER['REQUEST_METHOD'] ?? null,
+        'path' => $_SERVER['REQUEST_URI'] ?? null,
+        'status' => 500,
+        'phase' => 'bootstrap',
+    ]);
     HomeEdu\Http::json([
         'error' => [
             'code' => 'bootstrap_error',
-            'message' => HomeEdu\Env::get('APP_ENV', 'production') === 'development'
-                ? $error->getMessage()
-                : 'Сервис временно недоступен',
+            'message' => 'Сервис временно недоступен',
+            'requestId' => HomeEdu\Http::requestId(),
         ],
     ], 500);
 });
-
