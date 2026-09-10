@@ -355,5 +355,8 @@ await request('/auth/logout', { method: 'POST' }); cookie = ''
 await request('/auth/parent/login', { method: 'POST', body: JSON.stringify({ email: 'parent@homeedu.test', password: 'HomeEdu-test-2026!' }) })
 const aiExport = await request('/family/export')
 assert(aiExport.data.aiQuizDrafts.length === 1 && aiExport.data.aiInteractions.length === 2, 'AI audit data is missing from family export')
+const davidAiReport = await request(`/students/${david.student.id}/progress-report`)
+assert(davidAiReport.aiDigest.hintCount === 1 && davidAiReport.aiDigest.lessonCount === 1, 'AI hint usage is missing from the parent report')
+assert(davidAiReport.aiDigest.items[0].requestExcerpt.includes('сравнение дробей') && davidAiReport.aiDigest.conversationQuestion.includes('Сравнение простых дробей'), 'AI conversation prompt is not based on the child difficulty')
 
-console.log('Integration OK: pilot cycles and the safe AI draft approval boundary are verified')
+console.log('Integration OK: pilot cycles, AI approval boundary and parent AI digest are verified')

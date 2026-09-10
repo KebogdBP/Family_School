@@ -161,7 +161,14 @@ final class PlanningApi
         $summary['topicsToReview']=count(array_filter($mastery,static fn(array $topic):bool=>$topic['status']==='needs_reinforcement'));
         $achievements=Achievements::list($db,$familyId,$studentId);$summary['achievements']=count($achievements);
         $reviewTasks=Mastery::reviewTasks($db,$familyId,$studentId);
-        Http::json(['summary'=>$summary,'dailyDigest'=>self::dailyDigest($items),'weeklyDigest'=>self::weeklyDigest($db,$familyId,$studentId,$items,$mastery,$reviewTasks),'items'=>$items,'reviewTasks'=>$reviewTasks,'masterySubjects'=>Mastery::subjects($db,$familyId,$studentId),'mastery'=>$mastery,'achievements'=>$achievements]);
+        Http::json(['summary'=>$summary,'dailyDigest'=>self::dailyDigest($items),'aiDigest'=>self::aiDigest($db,$familyId,$studentId),'weeklyDigest'=>self::weeklyDigest($db,$familyId,$studentId,$items,$mastery,$reviewTasks),'items'=>$items,'reviewTasks'=>$reviewTasks,'masterySubjects'=>Mastery::subjects($db,$familyId,$studentId),'mastery'=>$mastery,'achievements'=>$achievements]);
+    }
+
+    /** @return array<string,mixed> */
+    private static function aiDigest(PDO $db,string $familyId,string $studentId): array
+    {
+        $s=$db->prepare('SELECT ai.id,ai.request_excerpt,ai.provider,ai.created_at,l.id AS lesson_id,l.title AS lesson_title,t.title AS topic_title,s.title AS subject_title FROM ai_interactions ai JOIN lessons l ON l.id=ai.lesson_id JOIN topics t ON t.id=l.topic_id JOIN sections se ON se.id=t.section_id JOIN curriculum_subjects cs ON cs.id=se.curriculum_subject_id JOIN subjects s ON s.id=cs.subject_id WHERE ai.family_id=:family_id AND ai.student_id=:student_id AND ai.interaction_type=\'hint\' AND DATE(ai.created_at)=CURDATE() ORDER BY ai.created_at DESC');$s->execute(['family_id'=>$familyId,'student_id'=>$studentId]);$rows=$s->fetchAll();$latest=$rows[0]??null;
+        return['date'=>date('Y-m-d'),'hintCount'=>count($rows),'lessonCount'=>count(array_unique(array_column($rows,'lesson_id'))),'items'=>array_map(static fn(array $row):array=>['id'=>$row['id'],'lessonId'=>$row['lesson_id'],'lessonTitle'=>$row['lesson_title'],'topicTitle'=>$row['topic_title'],'subjectTitle'=>$row['subject_title'],'requestExcerpt'=>$row['request_excerpt'],'provider'=>$row['provider'],'createdAt'=>$row['created_at']],$rows),'conversationQuestion'=>$latest?'Что сегодня было самым сложным в теме «'.$latest['topic_title'].'» и какой шаг помог продвинуться?':'Что сегодня получилось лучше всего и что хочется разобрать вместе?'];
     }
 
     /** @param array<int,array<string,mixed>> $items @return array<string,mixed> */
