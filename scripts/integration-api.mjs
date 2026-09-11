@@ -118,6 +118,28 @@ await request('/setup', {
 const parent = await request('/me')
 assert(parent.principal.role === 'parent', 'Setup did not create a parent session')
 
+await request('/auth/parent/password/change', {
+  method: 'POST',
+  body: JSON.stringify({ currentPassword: 'HomeEdu-test-2026!', newPassword: 'HomeEdu-changed-2026!' }),
+})
+cookie = ''
+await request('/auth/parent/login', {
+  method: 'POST',
+  body: JSON.stringify({ email: 'parent@homeedu.test', password: 'HomeEdu-changed-2026!' }),
+})
+await request('/auth/logout', { method: 'POST' })
+cookie = ''
+await request('/auth/parent/password/recover', {
+  method: 'POST',
+  headers: { 'X-Setup-Token': setupToken },
+  body: JSON.stringify({ email: 'parent@homeedu.test', newPassword: 'HomeEdu-test-2026!' }),
+})
+await request('/auth/parent/login', {
+  method: 'POST',
+  body: JSON.stringify({ email: 'parent@homeedu.test', password: 'HomeEdu-test-2026!' }),
+})
+assert((await request('/me')).principal.role === 'parent', 'Password recovery did not restore parent login')
+
 const sara = await request('/students', {
   method: 'POST',
   body: JSON.stringify({ displayName: 'Сара', grade: 6, age: 12, pin: '1206' }),

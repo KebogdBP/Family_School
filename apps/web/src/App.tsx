@@ -1,12 +1,14 @@
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type FormEvent, type ReactNode, useEffect, useState } from 'react'
-import { Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
+import { Navigate, NavLink, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
 import {
+  changeParentPassword,
   exportFamilyData,
   getMe,
   loginParent,
   loginStudent,
   logout,
+  recoverParentPassword,
   setupFamily,
   type FamilyExport,
 } from '@/entities/auth/api'
@@ -47,6 +49,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 function LoginPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const setPrincipal = useAuthStore((state) => state.setPrincipal)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -67,6 +70,11 @@ function LoginPage() {
   return (
     <AuthLayout title="Вход для родителя" subtitle="Управляйте программой Сары и Давида в одном семейном пространстве.">
       <form className="stack" onSubmit={submit}>
+        {searchParams.get('passwordChanged') === '1' && (
+          <p className="form-success" role="status">
+            Пароль обновлён. Войдите с новым паролем.
+          </p>
+        )}
         <Field label="Email">
           <input
             type="email"
@@ -90,7 +98,98 @@ function LoginPage() {
         <NavLink className="text-link" to="/setup">
           Первичная настройка семьи
         </NavLink>
+        <NavLink className="text-link" to="/recover-password">
+          Забыли пароль?
+        </NavLink>
       </form>
+    </AuthLayout>
+  )
+}
+
+function RecoverPasswordPage() {
+  const [form, setForm] = useState({ setupToken: '', email: '', newPassword: '', confirmation: '' })
+  const [completed, setCompleted] = useState(false)
+  const mutation = useMutation({
+    mutationFn: recoverParentPassword,
+    onSuccess: () => setCompleted(true),
+  })
+  const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }))
+
+  return (
+    <AuthLayout
+      title="Восстановление пароля"
+      subtitle="Используйте ключ установки, который хранится только в серверном .env."
+    >
+      {completed ? (
+        <div className="stack">
+          <p className="form-success" role="status">
+            Новый пароль сохранён. Все прежние сеансы завершены.
+          </p>
+          <NavLink className="button-link" to="/login?passwordChanged=1">
+            Перейти ко входу
+          </NavLink>
+        </div>
+      ) : (
+        <form
+          className="stack"
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (form.newPassword !== form.confirmation) return
+            mutation.mutate({ setupToken: form.setupToken, email: form.email, newPassword: form.newPassword })
+          }}
+        >
+          <Field label="Ключ установки">
+            <input
+              type="password"
+              required
+              autoComplete="off"
+              value={form.setupToken}
+              onChange={(event) => update('setupToken', event.target.value)}
+            />
+          </Field>
+          <Field label="Email родителя">
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              value={form.email}
+              onChange={(event) => update('email', event.target.value)}
+            />
+          </Field>
+          <Field label="Новый пароль (минимум 12 символов)">
+            <input
+              type="password"
+              minLength={12}
+              required
+              autoComplete="new-password"
+              value={form.newPassword}
+              onChange={(event) => update('newPassword', event.target.value)}
+            />
+          </Field>
+          <Field label="Повторите новый пароль">
+            <input
+              type="password"
+              minLength={12}
+              required
+              autoComplete="new-password"
+              value={form.confirmation}
+              onChange={(event) => update('confirmation', event.target.value)}
+            />
+          </Field>
+          {form.confirmation && form.newPassword !== form.confirmation && (
+            <p className="form-error" role="alert">
+              Пароли не совпадают
+            </p>
+          )}
+          <ErrorText error={mutation.error} />
+          <button disabled={mutation.isPending || !form.newPassword || form.newPassword !== form.confirmation}>
+            {mutation.isPending ? 'Сохраняем…' : 'Назначить новый пароль'}
+          </button>
+          <NavLink className="text-link" to="/login">
+            Вернуться ко входу
+          </NavLink>
+        </form>
+      )}
     </AuthLayout>
   )
 }
@@ -203,6 +302,7 @@ function AppShell({ principal, children }: { principal: Principal; children: Rea
             <>
               <NavLink to="/children">Дети</NavLink>
               <NavLink to="/reviews">Проверка работ</NavLink>
+              <NavLink to="/parent/profile">Профиль родителя</NavLink>
             </>
           ) : (
             <>
@@ -225,6 +325,79 @@ function AppShell({ principal, children }: { principal: Principal; children: Rea
         {children}
       </main>
     </div>
+  )
+}
+
+function ParentProfilePage() {
+  const navigate = useNavigate()
+  const client = useQueryClient()
+  const setPrincipal = useAuthStore((state) => state.setPrincipal)
+  const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmation: '' })
+  const mutation = useMutation({
+    mutationFn: changeParentPassword,
+    onSuccess: () => {
+      setPrincipal(null)
+      client.clear()
+      void navigate('/login?passwordChanged=1', { replace: true })
+    },
+  })
+
+  return (
+    <>
+      <header className="page-header">
+        <p className="eyebrow">Безопасность</p>
+        <h1>Профиль родителя</h1>
+        <p className="muted">После смены пароля HomeEdu завершит все активные сеансы родителя.</p>
+      </header>
+      <form
+        className="card stack"
+        onSubmit={(event) => {
+          event.preventDefault()
+          if (form.newPassword !== form.confirmation) return
+          mutation.mutate({ currentPassword: form.currentPassword, newPassword: form.newPassword })
+        }}
+      >
+        <h2>Изменить пароль</h2>
+        <Field label="Текущий пароль">
+          <input
+            type="password"
+            required
+            autoComplete="current-password"
+            value={form.currentPassword}
+            onChange={(event) => setForm({ ...form, currentPassword: event.target.value })}
+          />
+        </Field>
+        <Field label="Новый пароль (минимум 12 символов)">
+          <input
+            type="password"
+            minLength={12}
+            required
+            autoComplete="new-password"
+            value={form.newPassword}
+            onChange={(event) => setForm({ ...form, newPassword: event.target.value })}
+          />
+        </Field>
+        <Field label="Повторите новый пароль">
+          <input
+            type="password"
+            minLength={12}
+            required
+            autoComplete="new-password"
+            value={form.confirmation}
+            onChange={(event) => setForm({ ...form, confirmation: event.target.value })}
+          />
+        </Field>
+        {form.confirmation && form.newPassword !== form.confirmation && (
+          <p className="form-error" role="alert">
+            Пароли не совпадают
+          </p>
+        )}
+        <ErrorText error={mutation.error} />
+        <button disabled={mutation.isPending || !form.newPassword || form.newPassword !== form.confirmation}>
+          {mutation.isPending ? 'Меняем пароль…' : 'Изменить пароль'}
+        </button>
+      </form>
+    </>
   )
 }
 
@@ -635,6 +808,22 @@ function RoutedApp() {
         }
       />
       <Route path="/setup" element={principal ? <Navigate to="/children" replace /> : <SetupPage />} />
+      <Route
+        path="/recover-password"
+        element={principal ? <Navigate to="/parent/profile" replace /> : <RecoverPasswordPage />}
+      />
+      <Route
+        path="/parent/profile"
+        element={
+          principal?.role === 'parent' ? (
+            <AppShell principal={principal}>
+              <ParentProfilePage />
+            </AppShell>
+          ) : (
+            <Navigate to={principal ? '/today' : '/login'} replace />
+          )
+        }
+      />
       <Route
         path="/children"
         element={

@@ -42,6 +42,11 @@ for (const path of required) {
 const publicFiles = readFileSync(resolve(publicRoot, 'index.html'), 'utf8')
 if (!publicFiles.includes('/assets/')) throw new Error('Frontend assets were not built with root-relative paths')
 
+const publicRules = readFileSync(resolve(publicRoot, '.htaccess'), 'utf8')
+if (/RewriteRule\s+\^\s+https:/i.test(publicRules) || /Strict-Transport-Security/i.test(publicRules)) {
+  throw new Error('Base Beget release must not force HTTPS before a certificate is installed')
+}
+
 let version = 'unknown'
 try {
   version = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()

@@ -15,6 +15,21 @@ export const loginStudent = (input: { studentId: string; pin: string }) =>
     body: JSON.stringify(input),
   })
 
+export const recoverParentPassword = (input: { setupToken: string; email: string; newPassword: string }) => {
+  const { setupToken, ...body } = input
+  return api<{ status: string }>('/auth/parent/password/recover', {
+    method: 'POST',
+    headers: { 'X-Setup-Token': setupToken },
+    body: JSON.stringify(body),
+  })
+}
+
+export const changeParentPassword = (input: { currentPassword: string; newPassword: string }) =>
+  api<{ status: string }>('/auth/parent/password/change', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+
 export const setupFamily = (input: {
   setupToken: string
   familyName: string

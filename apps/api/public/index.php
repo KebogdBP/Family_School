@@ -36,6 +36,8 @@ try {
     match (true) {
         $method === 'POST' && $path === '/api/v1/setup' => setupFamily($db),
         $method === 'POST' && $path === '/api/v1/auth/parent/login' => loginParent($db),
+        $method === 'POST' && $path === '/api/v1/auth/parent/password/recover' => recoverParentPassword($db),
+        $method === 'POST' && $path === '/api/v1/auth/parent/password/change' => changeParentPassword($db),
         $method === 'POST' && $path === '/api/v1/auth/student/login' => loginStudent($db),
         $method === 'POST' && $path === '/api/v1/auth/logout' => logout($db),
         $method === 'GET' && $path === '/api/v1/me' => currentPrincipal($db),
@@ -180,6 +182,99 @@ function loginParent(PDO $db): never
             'displayName' => $user['display_name'],
         ],
     ]);
+}
+
+function recoverParentPassword(PDO $db): never
+{
+    $provided = $_SERVER['HTTP_X_SETUP_TOKEN'] ?? '';
+    if (!is_string($provided) || !hash_equals(Env::get('APP_SETUP_TOKEN'), $provided)) {
+        Http::error('forbidden', 'Неверный ключ установки', 403);
+    }
+
+    $body = Http::body();
+    $email = strtolower(trim((string) ($body['email'] ?? '')));
+    $newPassword = (string) ($body['newPassword'] ?? '');
+    validateParentPassword($newPassword);
+
+    $statement = $db->prepare('SELECT id, family_id FROM users WHERE email = :email AND deleted_at IS NULL LIMIT 1');
+    $statement->execute(['email' => $email]);
+    $user = $statement->fetch();
+    if (!$user) {
+        Http::error('not_found', 'Родитель с таким email не найден', 404);
+    }
+
+    $db->beginTransaction();
+    try {
+        $db->prepare('UPDATE users SET password_hash = :password_hash, updated_at = NOW() WHERE id = :id')->execute([
+            'password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
+            'id' => $user['id'],
+        ]);
+        $db->prepare('DELETE FROM sessions WHERE user_id = :user_id')->execute(['user_id' => $user['id']]);
+        Audit::record(
+            $db,
+            (string) $user['family_id'],
+            'parent',
+            (string) $user['id'],
+            'auth.parent_password_recovered',
+        );
+        $db->commit();
+    } catch (Throwable $error) {
+        $db->rollBack();
+        throw $error;
+    }
+
+    Http::json(['status' => 'password_updated']);
+}
+
+function changeParentPassword(PDO $db): never
+{
+    $session = Auth::requireRole($db, 'parent');
+    $body = Http::body();
+    $currentPassword = (string) ($body['currentPassword'] ?? '');
+    $newPassword = (string) ($body['newPassword'] ?? '');
+    validateParentPassword($newPassword);
+    if (hash_equals($currentPassword, $newPassword)) {
+        Http::error('password_not_changed', 'Новый пароль должен отличаться от текущего', 422);
+    }
+
+    $statement = $db->prepare(
+        'SELECT password_hash FROM users WHERE id = :id AND family_id = :family_id AND deleted_at IS NULL LIMIT 1',
+    );
+    $statement->execute(['id' => $session['user_id'], 'family_id' => $session['family_id']]);
+    $passwordHash = $statement->fetchColumn();
+    if (!is_string($passwordHash) || !password_verify($currentPassword, $passwordHash)) {
+        Http::error('invalid_password', 'Неверный текущий пароль', 401);
+    }
+
+    $db->beginTransaction();
+    try {
+        $db->prepare('UPDATE users SET password_hash = :password_hash, updated_at = NOW() WHERE id = :id')->execute([
+            'password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
+            'id' => $session['user_id'],
+        ]);
+        Audit::record(
+            $db,
+            (string) $session['family_id'],
+            'parent',
+            (string) $session['user_id'],
+            'auth.parent_password_changed',
+        );
+        $db->prepare('DELETE FROM sessions WHERE user_id = :user_id')->execute(['user_id' => $session['user_id']]);
+        $db->commit();
+    } catch (Throwable $error) {
+        $db->rollBack();
+        throw $error;
+    }
+
+    Auth::logout($db);
+    Http::json(['status' => 'password_updated']);
+}
+
+function validateParentPassword(string $password): void
+{
+    if (strlen($password) < 12) {
+        Http::error('weak_password', 'Пароль должен содержать не менее 12 символов', 422);
+    }
 }
 
 function loginStudent(PDO $db): never
