@@ -97,7 +97,7 @@
 - [x] weekly digest with plan completion, mastered topics, completed reviews, difficulties and deterministic next-plan suggestions
 - [x] parent-only versioned JSON export without credentials, sessions, storage names or file contents
 
-## Сверка с Project Vision — 10 сентября 2026
+## Сверка с Project Vision — 12 сентября 2026
 
 Реализация сохраняет утверждённый стек и продуктовые принципы, но часть поздних функций была сделана до обязательного пилотного контента. До продолжения фазы качества нужно закрыть следующие продуктовые пробелы:
 
@@ -117,10 +117,11 @@
 - [x] структурированные JSON-логи серверных ошибок с request ID и fingerprint без текста исключения, query-параметров и пользовательского содержимого;
 - [x] единое автоматическое форматирование TypeScript, CSS, Markdown, JSON и PHP с проверкой в CI;
 - [x] воспроизводимый production release для Beget со статическим frontend, PHP API, HTTPS/SPA rewrite и приватными `.env` и uploads;
-- [ ] создать сайт, MySQL и HTTPS в реальном аккаунте Beget и пройти production smoke test.
+- [x] создать технический сайт и MySQL в реальном аккаунте Beget, загрузить release и production-конфигурацию;
+- [ ] устранить 403/нестабильную выдачу сайта, подтвердить HTTPS и пройти production smoke test.
 
-Локальная production-подготовка завершена. До пилотного запуска остаётся развернуть готовый release в реальном аккаунте Beget и пройти production smoke test.
+Локальная production-подготовка завершена. Развёртывание на Beget начато, но пока не принято: технический домен после обновления возвращал 403, поэтому доступность frontend и API не подтверждена.
 
 ## Следующая задача
 
-Создать сайт и MySQL в аккаунте Beget, включить HTTPS, заполнить production `.env`, применить миграции и пройти smoke test по `docs/DEPLOY_BEGET.md`.
+Восстановить корректную привязку technical domain к `public_html`, проверить права и логи Beget, затем подтвердить `/api/v1/health`, HTTPS и полный production smoke test по `docs/DEPLOY_BEGET.md`. После запуска установить Давиду полный КТП математики 4 класса из родительской страницы программы.
