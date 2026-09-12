@@ -12,6 +12,7 @@ import {
   getCurricula,
   getCurriculum,
   getSubjects,
+  installDavidGrade4Math,
   installDavidFractions,
   installSaraFractions,
   updateCurriculumNode,
@@ -457,6 +458,16 @@ function ProgramTree({ tree }: { tree: CurriculumTree }) {
 
 function PilotRouteInstaller({ studentId, grade }: { studentId: string; grade: number }) {
   const client = useQueryClient()
+  const fullMath = useMutation({
+    mutationFn: () => installDavidGrade4Math(studentId),
+    onSuccess: async (result) => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ['curricula', studentId] }),
+        client.invalidateQueries({ queryKey: ['curriculum', result.curriculumId] }),
+        client.invalidateQueries({ queryKey: ['subjects'] }),
+      ])
+    },
+  })
   const install = grade === 4 ? installDavidFractions : installSaraFractions
   const seed = useMutation({
     mutationFn: () => install(studentId),
@@ -470,6 +481,24 @@ function PilotRouteInstaller({ studentId, grade }: { studentId: string; grade: n
   })
   return (
     <div className="pilot-route-action">
+      {grade === 4 && (
+        <>
+          <button disabled={fullMath.isPending || Boolean(fullMath.data)} onClick={() => fullMath.mutate()}>
+            {fullMath.isPending
+              ? 'Добавляем математику…'
+              : fullMath.data
+                ? 'Математика 4 класса добавлена'
+                : 'Добавить всю математику 4 класса (63 темы)'}
+          </button>
+          <ErrorText error={fullMath.error} />
+          {fullMath.data?.installed && (
+            <small className="seed-inline-status" role="status">
+              Готово: {fullMath.data.counts?.sections} разделов, {fullMath.data.counts?.lessons} урока и{' '}
+              {fullMath.data.counts?.quizzes} мини-теста
+            </small>
+          )}
+        </>
+      )}
       <button disabled={seed.isPending || Boolean(seed.data)} onClick={() => seed.mutate()}>
         {seed.isPending
           ? 'Устанавливаем…'

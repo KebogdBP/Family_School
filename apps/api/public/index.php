@@ -43,6 +43,9 @@ try {
         $method === 'GET' && $path === '/api/v1/me' => currentPrincipal($db),
         $method === 'GET' && $path === '/api/v1/family/export' => FamilyExportApi::export($db),
         $method === 'POST' &&
+            preg_match('#^/api/v1/students/([0-9a-f-]{36})/pilot-content/david-math-grade-4$#', $path, $matches) === 1
+            => PilotContentApi::installDavidGrade4Math($db, $matches[1]),
+        $method === 'POST' &&
             preg_match('#^/api/v1/students/([0-9a-f-]{36})/pilot-content/david-fractions$#', $path, $matches) === 1
             => PilotContentApi::installDavidFractions($db, $matches[1]),
         $method === 'POST' &&

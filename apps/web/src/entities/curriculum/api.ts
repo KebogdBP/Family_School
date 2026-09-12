@@ -136,8 +136,17 @@ export type PilotContentResult = {
   alreadyInstalled: boolean
   curriculumId: string
   routeCode: string
-  counts?: { topics: number; lessons: number; competencies: number; quizzes: number; homeworks: number }
+  counts?: {
+    sections: number
+    topics: number
+    lessons: number
+    competencies: number
+    quizzes: number
+    homeworks: number
+  }
 }
+export const installDavidGrade4Math = (studentId: string) =>
+  api<PilotContentResult>(`/students/${studentId}/pilot-content/david-math-grade-4`, { method: 'POST' })
 export const installDavidFractions = (studentId: string) =>
   api<PilotContentResult>(`/students/${studentId}/pilot-content/david-fractions`, { method: 'POST' })
 export const installSaraFractions = (studentId: string) =>

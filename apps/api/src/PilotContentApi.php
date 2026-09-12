@@ -8,6 +8,11 @@ use PDO;
 
 final class PilotContentApi
 {
+    public static function installDavidGrade4Math(PDO $db, string $studentId): never
+    {
+        self::installSections($db, $studentId, 4, 'david-math-grade-4-2026-v1', Grade4MathContent::sections());
+    }
+
     public static function installDavidFractions(PDO $db, string $studentId): never
     {
         self::install(
@@ -44,6 +49,23 @@ final class PilotContentApi
         string $sectionDescription,
         array $definitions,
     ): never {
+        self::installSections($db, $studentId, $grade, $routeCode, [
+            [
+                'title' => $sectionTitle,
+                'description' => $sectionDescription,
+                'topics' => $definitions,
+            ],
+        ]);
+    }
+
+    /** @param array<int,array<string,mixed>> $sections */
+    private static function installSections(
+        PDO $db,
+        string $studentId,
+        int $grade,
+        string $routeCode,
+        array $sections,
+    ): never {
         $session = Auth::requireRole($db, 'parent');
         $familyId = (string) $session['family_id'];
         $actorId = (string) $session['user_id'];
@@ -76,118 +98,140 @@ final class PilotContentApi
             $subjectId = self::subject($db, $familyId);
             $curriculumId = self::curriculum($db, $familyId, $studentId, $grade);
             $assignmentId = self::assignment($db, $familyId, $curriculumId, $subjectId);
-            $sectionId = self::insert(
+            $positionRow = self::one(
                 $db,
-                'INSERT INTO sections(id,family_id,curriculum_subject_id,title,description,position) VALUES(:id,:family_id,:parent,:title,:description,0)',
-                [
-                    'family_id' => $familyId,
-                    'parent' => $assignmentId,
-                    'title' => $sectionTitle,
-                    'description' => $sectionDescription,
-                ],
+                'SELECT COALESCE(MAX(position), -1) AS max_position FROM sections WHERE curriculum_subject_id=:assignment AND deleted_at IS NULL',
+                ['assignment' => $assignmentId],
             );
+            $sectionPositionOffset = ((int) ($positionRow['max_position'] ?? -1)) + 1;
             $previousCompetency = null;
-            $counts = ['topics' => 0, 'lessons' => 0, 'competencies' => 0, 'quizzes' => 0, 'homeworks' => 0];
-            foreach ($definitions as $topicPosition => $topic) {
-                $topicId = self::insert(
+            $counts = [
+                'sections' => 0,
+                'topics' => 0,
+                'lessons' => 0,
+                'competencies' => 0,
+                'quizzes' => 0,
+                'homeworks' => 0,
+            ];
+            $firstSectionId = null;
+            foreach ($sections as $sectionPosition => $section) {
+                $sectionId = self::insert(
                     $db,
-                    'INSERT INTO topics(id,family_id,section_id,title,description,position) VALUES(:id,:family_id,:parent,:title,:description,:position)',
+                    'INSERT INTO sections(id,family_id,curriculum_subject_id,title,description,position) VALUES(:id,:family_id,:parent,:title,:description,:position)',
                     [
                         'family_id' => $familyId,
-                        'parent' => $sectionId,
-                        'title' => $topic['title'],
-                        'description' => $topic['description'],
-                        'position' => $topicPosition,
+                        'parent' => $assignmentId,
+                        'title' => $section['title'],
+                        'description' => $section['description'],
+                        'position' => $sectionPositionOffset + $sectionPosition,
                     ],
                 );
-                $counts['topics']++;
-                foreach ($topic['competencies'] as $competency) {
-                    $competencyId = self::insert(
+                $firstSectionId ??= $sectionId;
+                $counts['sections']++;
+                foreach ($section['topics'] as $topicPosition => $topic) {
+                    $topicId = self::insert(
                         $db,
-                        'INSERT INTO competencies(id,family_id,topic_id,title,description) VALUES(:id,:family_id,:parent,:title,:description)',
+                        'INSERT INTO topics(id,family_id,section_id,title,description,position) VALUES(:id,:family_id,:parent,:title,:description,:position)',
                         [
                             'family_id' => $familyId,
-                            'parent' => $topicId,
-                            'title' => $competency,
-                            'description' => 'Проверяется практикой, объяснением и повторением.',
+                            'parent' => $sectionId,
+                            'title' => $topic['title'],
+                            'description' => $topic['description'],
+                            'position' => $topicPosition,
                         ],
                     );
-                    if ($previousCompetency) {
-                        $db->prepare(
-                            'INSERT INTO competency_prerequisites(competency_id,prerequisite_id,family_id) VALUES(:id,:required,:family_id)',
-                        )->execute([
-                            'id' => $competencyId,
-                            'required' => $previousCompetency,
-                            'family_id' => $familyId,
-                        ]);
-                    }
-                    $previousCompetency = $competencyId;
-                    $counts['competencies']++;
-                }
-                foreach ($topic['lessons'] as $lessonPosition => $lesson) {
-                    $lessonId = self::insert(
-                        $db,
-                        'INSERT INTO lessons(id,family_id,topic_id,title,summary,estimated_minutes,position,status) VALUES(:id,:family_id,:parent,:title,:summary,:minutes,:position,\'published\')',
-                        [
-                            'family_id' => $familyId,
-                            'parent' => $topicId,
-                            'title' => $lesson['title'],
-                            'summary' => $lesson['summary'],
-                            'minutes' => 15,
-                            'position' => $lessonPosition,
-                        ],
-                    );
-                    $counts['lessons']++;
-                    foreach ($lesson['blocks'] as $position => $block) {
-                        self::insert(
+                    $counts['topics']++;
+                    foreach ($topic['competencies'] as $competency) {
+                        $competencyId = self::insert(
                             $db,
-                            'INSERT INTO content_blocks(id,family_id,lesson_id,block_type,content_json,position) VALUES(:id,:family_id,:parent,:type,:content,:position)',
+                            'INSERT INTO competencies(id,family_id,topic_id,title,description) VALUES(:id,:family_id,:parent,:title,:description)',
                             [
                                 'family_id' => $familyId,
-                                'parent' => $lessonId,
-                                'type' => $position === 1 ? 'example' : 'markdown',
-                                'content' => json_encode(
-                                    ['text' => $block],
+                                'parent' => $topicId,
+                                'title' => $competency,
+                                'description' => 'Проверяется практикой, объяснением и повторением.',
+                            ],
+                        );
+                        if ($previousCompetency) {
+                            $db->prepare(
+                                'INSERT INTO competency_prerequisites(competency_id,prerequisite_id,family_id) VALUES(:id,:required,:family_id)',
+                            )->execute([
+                                'id' => $competencyId,
+                                'required' => $previousCompetency,
+                                'family_id' => $familyId,
+                            ]);
+                        }
+                        $previousCompetency = $competencyId;
+                        $counts['competencies']++;
+                    }
+                    foreach ($topic['lessons'] as $lessonPosition => $lesson) {
+                        $lessonId = self::insert(
+                            $db,
+                            'INSERT INTO lessons(id,family_id,topic_id,title,summary,estimated_minutes,position,status) VALUES(:id,:family_id,:parent,:title,:summary,:minutes,:position,\'published\')',
+                            [
+                                'family_id' => $familyId,
+                                'parent' => $topicId,
+                                'title' => $lesson['title'],
+                                'summary' => $lesson['summary'],
+                                'minutes' => 15,
+                                'position' => $lessonPosition,
+                            ],
+                        );
+                        $counts['lessons']++;
+                        foreach ($lesson['blocks'] as $position => $block) {
+                            self::insert(
+                                $db,
+                                'INSERT INTO content_blocks(id,family_id,lesson_id,block_type,content_json,position) VALUES(:id,:family_id,:parent,:type,:content,:position)',
+                                [
+                                    'family_id' => $familyId,
+                                    'parent' => $lessonId,
+                                    'type' => $position === 1 ? 'example' : 'markdown',
+                                    'content' => json_encode(
+                                        ['text' => $block],
+                                        JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
+                                    ),
+                                    'position' => $position,
+                                ],
+                            );
+                        }
+                        $activityId = self::insert(
+                            $db,
+                            'INSERT INTO activities(id,family_id,lesson_id,activity_type,title,position) VALUES(:id,:family_id,:parent,\'quiz\',:title,10)',
+                            ['family_id' => $familyId, 'parent' => $lessonId, 'title' => 'Быстрая проверка'],
+                        );
+                        $question = $lesson['quiz'];
+                        self::insert(
+                            $db,
+                            'INSERT INTO quiz_questions(id,family_id,activity_id,prompt,question_type,options_json,correct_answer_json,explanation) VALUES(:id,:family_id,:parent,:prompt,:type,:options,:answer,:explanation)',
+                            [
+                                'family_id' => $familyId,
+                                'parent' => $activityId,
+                                'prompt' => $question['prompt'],
+                                'type' => $question['type'],
+                                'options' => isset($question['options'])
+                                    ? json_encode($question['options'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)
+                                    : null,
+                                'answer' => json_encode(
+                                    $question['answer'],
                                     JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
                                 ),
-                                'position' => $position,
+                                'explanation' => $question['explanation'],
                             ],
                         );
-                    }
-                    $activityId = self::insert(
-                        $db,
-                        'INSERT INTO activities(id,family_id,lesson_id,activity_type,title,position) VALUES(:id,:family_id,:parent,\'quiz\',:title,10)',
-                        ['family_id' => $familyId, 'parent' => $lessonId, 'title' => 'Быстрая проверка'],
-                    );
-                    $question = $lesson['quiz'];
-                    self::insert(
-                        $db,
-                        'INSERT INTO quiz_questions(id,family_id,activity_id,prompt,question_type,options_json,correct_answer_json,explanation) VALUES(:id,:family_id,:parent,:prompt,:type,:options,:answer,:explanation)',
-                        [
-                            'family_id' => $familyId,
-                            'parent' => $activityId,
-                            'prompt' => $question['prompt'],
-                            'type' => $question['type'],
-                            'options' => isset($question['options'])
-                                ? json_encode($question['options'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)
-                                : null,
-                            'answer' => json_encode($question['answer'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
-                            'explanation' => $question['explanation'],
-                        ],
-                    );
-                    $counts['quizzes']++;
-                    if (isset($lesson['homework'])) {
-                        self::insert(
-                            $db,
-                            'INSERT INTO activities(id,family_id,lesson_id,activity_type,title,instructions,position) VALUES(:id,:family_id,:parent,\'open_work\',:title,:instructions,20)',
-                            [
-                                'family_id' => $familyId,
-                                'parent' => $lessonId,
-                                'title' => $lesson['homework']['title'],
-                                'instructions' => $lesson['homework']['instructions'],
-                            ],
-                        );
-                        $counts['homeworks']++;
+                        $counts['quizzes']++;
+                        if (isset($lesson['homework'])) {
+                            self::insert(
+                                $db,
+                                'INSERT INTO activities(id,family_id,lesson_id,activity_type,title,instructions,position) VALUES(:id,:family_id,:parent,\'open_work\',:title,:instructions,20)',
+                                [
+                                    'family_id' => $familyId,
+                                    'parent' => $lessonId,
+                                    'title' => $lesson['homework']['title'],
+                                    'instructions' => $lesson['homework']['instructions'],
+                                ],
+                            );
+                            $counts['homeworks']++;
+                        }
                     }
                 }
             }
@@ -202,7 +246,7 @@ final class PilotContentApi
                 'student_id' => $studentId,
                 'route' => $routeCode,
                 'curriculum_id' => $curriculumId,
-                'section_id' => $sectionId,
+                'section_id' => $firstSectionId,
             ]);
             Audit::record($db, $familyId, 'parent', $actorId, 'pilot_content.installed', 'student', $studentId, [
                 'routeCode' => $routeCode,

@@ -613,8 +613,31 @@ assert(
     repeatedDavidRoute.curriculumId === davidRoute.curriculumId,
   'David pilot route is not idempotent',
 )
+const davidGrade4Math = await request(`/students/${david.student.id}/pilot-content/david-math-grade-4`, {
+  method: 'POST',
+})
+assert(
+  davidGrade4Math.installed &&
+    davidGrade4Math.curriculumId === davidRoute.curriculumId &&
+    davidGrade4Math.counts.topics === 63 &&
+    davidGrade4Math.counts.lessons === 63 &&
+    davidGrade4Math.counts.quizzes === 63,
+  'David grade 4 mathematics curriculum is incomplete',
+)
+const repeatedDavidGrade4Math = await request(`/students/${david.student.id}/pilot-content/david-math-grade-4`, {
+  method: 'POST',
+})
+assert(
+  !repeatedDavidGrade4Math.installed && repeatedDavidGrade4Math.alreadyInstalled,
+  'David grade 4 mathematics curriculum is not idempotent',
+)
 const davidTree = await request(`/curricula/${davidRoute.curriculumId}`)
 assert(davidTree.curriculum.subjects[0].sections[0].topics.length === 4, 'David curriculum tree is incomplete')
+assert(
+  davidTree.curriculum.subjects[0].sections.length === 6 &&
+    davidTree.curriculum.subjects[0].sections.reduce((sum, section) => sum + section.topics.length, 0) === 67,
+  'David curriculum does not contain the complete grade 4 mathematics plan',
+)
 const saraRoute = await request(`/students/${sara.student.id}/pilot-content/sara-fractions`, { method: 'POST' })
 assert(
   saraRoute.installed &&
@@ -643,7 +666,7 @@ assert(
   'Learning records are missing from family export',
 )
 assert(
-  familyExport.data.pilotContentInstalls.length === 2,
+  familyExport.data.pilotContentInstalls.length === 3,
   'Pilot content installation markers are missing from export',
 )
 const serializedExport = JSON.stringify(familyExport)
@@ -656,7 +679,7 @@ await request('/auth/student/login', {
   method: 'POST',
   body: JSON.stringify({ studentId: david.student.id, pin: '1004' }),
 })
-assert((await request('/student/lessons')).lessons.length === 7, 'David cannot access all lessons from his pilot route')
+assert((await request('/student/lessons')).lessons.length === 70, 'David cannot access all mathematics lessons')
 const davidDiagnostic = await request('/student/diagnostic')
 assert(
   davidDiagnostic.available && !davidDiagnostic.completed && davidDiagnostic.questions.length === 4,
@@ -683,7 +706,7 @@ await completePilotLesson({
   pin: '1004',
   diagnosticResult: davidDiagnosticResult,
   quizAnswer: { selectedOption: 0 },
-  expectedLessonCount: 7,
+  expectedLessonCount: 70,
 })
 await request('/auth/logout', { method: 'POST' })
 cookie = ''

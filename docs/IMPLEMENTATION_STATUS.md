@@ -44,6 +44,7 @@
 - [x] CRUD API for subjects, sections, topics and lessons
 - [x] curriculum creation, subject assignment and ordered curriculum tree
 - [x] idempotent grade 4 fractions route for David: 4 topics, 7 lessons, 10 linked competencies, 7 quizzes and 4 open works
+- [x] полный КТП математики Давида на 2026/27 год: 5 разделов, 63 темы, 63 объяснения и 63 закрепляющих мини-теста
 - [x] idempotent grade 6 common fractions route for Sara: 4 topics, 8 lessons, 11 linked competencies, 8 quizzes and 4 open works
 - [x] parent curriculum page for each student
 - [x] create curriculum and assign existing or custom subjects
