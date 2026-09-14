@@ -14,6 +14,8 @@ import {
   getSubjects,
   installDavidGrade4Math,
   installDavidFractions,
+  installGrade4English,
+  installGrade4Russian,
   installSaraFractions,
   updateCurriculumNode,
   updateMasterySettings,
@@ -468,6 +470,26 @@ function PilotRouteInstaller({ studentId, grade }: { studentId: string; grade: n
       ])
     },
   })
+  const fullRussian = useMutation({
+    mutationFn: () => installGrade4Russian(studentId),
+    onSuccess: async (result) => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ['curricula', studentId] }),
+        client.invalidateQueries({ queryKey: ['curriculum', result.curriculumId] }),
+        client.invalidateQueries({ queryKey: ['subjects'] }),
+      ])
+    },
+  })
+  const fullEnglish = useMutation({
+    mutationFn: () => installGrade4English(studentId),
+    onSuccess: async (result) => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ['curricula', studentId] }),
+        client.invalidateQueries({ queryKey: ['curriculum', result.curriculumId] }),
+        client.invalidateQueries({ queryKey: ['subjects'] }),
+      ])
+    },
+  })
   const install = grade === 4 ? installDavidFractions : installSaraFractions
   const seed = useMutation({
     mutationFn: () => install(studentId),
@@ -495,6 +517,34 @@ function PilotRouteInstaller({ studentId, grade }: { studentId: string; grade: n
             <small className="seed-inline-status" role="status">
               Готово: {fullMath.data.counts?.sections} разделов, {fullMath.data.counts?.lessons} урока и{' '}
               {fullMath.data.counts?.quizzes} мини-теста
+            </small>
+          )}
+          <button disabled={fullRussian.isPending || Boolean(fullRussian.data)} onClick={() => fullRussian.mutate()}>
+            {fullRussian.isPending
+              ? 'Добавляем русский язык…'
+              : fullRussian.data
+                ? 'Русский язык 4 класса добавлен'
+                : 'Добавить русский язык 4 класса (92 темы)'}
+          </button>
+          <ErrorText error={fullRussian.error} />
+          {fullRussian.data?.installed && (
+            <small className="seed-inline-status" role="status">
+              Готово: {fullRussian.data.counts?.sections} разделов, {fullRussian.data.counts?.lessons} уроков и{' '}
+              {fullRussian.data.counts?.quizzes} мини-тестов
+            </small>
+          )}
+          <button disabled={fullEnglish.isPending || Boolean(fullEnglish.data)} onClick={() => fullEnglish.mutate()}>
+            {fullEnglish.isPending
+              ? 'Добавляем английский язык…'
+              : fullEnglish.data
+                ? 'Английский язык 4 класса добавлен'
+                : 'Добавить английский язык 4 класса (42 темы)'}
+          </button>
+          <ErrorText error={fullEnglish.error} />
+          {fullEnglish.data?.installed && (
+            <small className="seed-inline-status" role="status">
+              Готово: {fullEnglish.data.counts?.sections} разделов, {fullEnglish.data.counts?.lessons} уроков и{' '}
+              {fullEnglish.data.counts?.quizzes} мини-тестов
             </small>
           )}
         </>

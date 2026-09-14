@@ -17,6 +17,13 @@ final class AiApi
             }
             Http::error('method_not_allowed', 'Метод не поддерживается', 405);
         }
+        if (preg_match('#^/api/v1/student/lessons/([0-9a-f-]{36})/ai-review$#', $path, $m) === 1) {
+            $session = Auth::requireRole($db, 'student');
+            if ($method === 'POST') {
+                self::reviewAnswer($db, (string) $session['family_id'], (string) $session['student_id'], $m[1]);
+            }
+            Http::error('method_not_allowed', 'Метод не поддерживается', 405);
+        }
         $session = Auth::requireRole($db, 'parent');
         $familyId = (string) $session['family_id'];
         $actorId = (string) $session['user_id'];
@@ -91,6 +98,71 @@ final class AiApi
             ['draft' => self::shape(['id' => $id, 'status' => 'draft', 'approved_activity_id' => null, ...$draft])],
             201,
         );
+    }
+
+    private static function reviewAnswer(PDO $db, string $familyId, string $studentId, string $lessonId): never
+    {
+        self::limit($db, $familyId, $studentId, 'answer_review', 20);
+        $lesson = self::studentLesson($db, $familyId, $studentId, $lessonId);
+        $body = Http::body();
+        $answer = mb_substr(trim((string) ($body['answer'] ?? '')), 0, 1500);
+        if ($answer === '') {
+            Http::error('validation_error', 'Напиши решение или объяснение своими словами', 422);
+        }
+        $reference = self::oneLessonCheck($db, $familyId, $lessonId);
+        $fallback = [
+            'verdict' => 'manual_review',
+            'score' => null,
+            'feedback' => 'Ответ сохранён, но настоящая AI-проверка пока не подключена. Сравни ход решения с примером урока или попроси родителя проверить его.',
+            'nextStep' => 'Проверь вычисления по шагам и объясни, почему выбрано именно это действие.',
+        ];
+        $schema = [
+            'type' => 'object',
+            'properties' => [
+                'verdict' => ['type' => 'string', 'enum' => ['correct', 'partial', 'incorrect']],
+                'score' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 100],
+                'feedback' => ['type' => 'string'],
+                'nextStep' => ['type' => 'string'],
+            ],
+            'required' => ['verdict', 'score', 'feedback', 'nextStep'],
+            'additionalProperties' => false,
+        ];
+        $prompt = "Класс: {$lesson['grade']}. Тема: {$lesson['topic_title']}. Урок: {$lesson['title']}. " .
+            "Контрольный вопрос: {$reference['prompt']}. Ориентир для проверки: {$reference['explanation']}. " .
+            "Ответ ученика: {$answer}";
+        $raw = self::openAi(
+            $prompt,
+            $schema,
+            'Проверь математический ответ ученика 4 класса. Оцени не только результат, но и ход рассуждения. Не раскрывай лишние персональные данные. Дай короткую доброжелательную обратную связь и один следующий шаг. Верни строго JSON по схеме.',
+        );
+        $review = $fallback;
+        $provider = 'fallback';
+        if (is_string($raw)) {
+            try {
+                $parsed = json_decode($raw, true, flags: JSON_THROW_ON_ERROR);
+                if (is_array($parsed)) {
+                    $review = $parsed;
+                    $provider = 'openai';
+                }
+            } catch (\Throwable) {
+            }
+        }
+        $payload = ['review' => $review, 'provider' => $provider];
+        self::log($db, $familyId, $studentId, $lessonId, 'answer_review', $provider, $answer, $payload);
+        Http::json($payload, 201);
+    }
+
+    /** @return array<string,mixed> */
+    private static function oneLessonCheck(PDO $db, string $familyId, string $lessonId): array
+    {
+        $statement = $db->prepare(
+            'SELECT q.prompt,q.explanation FROM activities a JOIN quiz_questions q ON q.activity_id=a.id WHERE a.lesson_id=:lesson_id AND a.family_id=:family_id AND a.activity_type=\'quiz\' AND a.deleted_at IS NULL ORDER BY a.position,a.created_at LIMIT 1',
+        );
+        $statement->execute(['lesson_id' => $lessonId, 'family_id' => $familyId]);
+        $row = $statement->fetch();
+        return is_array($row)
+            ? $row
+            : ['prompt' => 'Объясни решение задания по теме урока.', 'explanation' => 'Проверь правило и вычисления по шагам.'];
     }
 
     private static function drafts(PDO $db, string $familyId, string $lessonId): never

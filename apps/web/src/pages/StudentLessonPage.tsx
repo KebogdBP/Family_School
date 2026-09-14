@@ -5,6 +5,7 @@ import {
   deleteHomeworkFile,
   getStudentLesson,
   requestAiHint,
+  requestAiReview,
   saveHomeworkSubmission,
   saveLessonProgress,
   saveReflection,
@@ -296,6 +297,57 @@ function AiHint({ lessonId }: { lessonId: string }) {
   )
 }
 
+function AiAnswerReview({ lessonId }: { lessonId: string }) {
+  const [answer, setAnswer] = useState('')
+  const review = useMutation({ mutationFn: () => requestAiReview(lessonId, answer) })
+  return (
+    <form
+      className="card ai-hint"
+      onSubmit={(event) => {
+        event.preventDefault()
+        review.mutate()
+      }}
+    >
+      <span className="badge">Проверка решения</span>
+      <h2>Объясни ответ своими словами</h2>
+      <p className="muted">Запиши ответ и ход решения. AI проверит рассуждение и подскажет следующий шаг.</p>
+      <textarea
+        rows={5}
+        maxLength={1500}
+        required
+        placeholder="Например: сначала я…, затем…, поэтому ответ…"
+        value={answer}
+        onChange={(event) => setAnswer(event.target.value)}
+      />
+      <button disabled={!answer.trim() || review.isPending}>
+        {review.isPending ? 'Проверяю…' : 'Проверить с AI'}
+      </button>
+      {review.data && (
+        <div className="ai-hint-answer" role="status">
+          <strong>
+            {review.data.review.verdict === 'correct'
+              ? 'Решение верное'
+              : review.data.review.verdict === 'partial'
+                ? 'Почти получилось'
+                : review.data.review.verdict === 'incorrect'
+                  ? 'Нужно исправить'
+                  : 'Нужна ручная проверка'}
+            {review.data.review.score !== null ? ` · ${review.data.review.score}%` : ''}
+          </strong>
+          <p>{review.data.review.feedback}</p>
+          <p>
+            <strong>Следующий шаг:</strong> {review.data.review.nextStep}
+          </p>
+          {review.data.provider === 'fallback' && (
+            <small className="muted">OpenAI пока не подключён — показана локальная рекомендация.</small>
+          )}
+        </div>
+      )}
+      {review.error && <p className="form-error">{review.error.message}</p>}
+    </form>
+  )
+}
+
 export function StudentLessonPage() {
   const { lessonId = '' } = useParams()
   const client = useQueryClient()
@@ -387,6 +439,7 @@ export function StudentLessonPage() {
         )}
         <AiHint lessonId={lessonId} />
         {completed && lesson.quizzes.map((quiz) => <StudentQuizCard key={quiz.id} quiz={quiz} />)}
+        {completed && <AiAnswerReview lessonId={lessonId} />}
         {completed &&
           lesson.homeworks.map((homework) => (
             <HomeworkCard

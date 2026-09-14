@@ -46,6 +46,12 @@ try {
             preg_match('#^/api/v1/students/([0-9a-f-]{36})/pilot-content/david-math-grade-4$#', $path, $matches) === 1
             => PilotContentApi::installDavidGrade4Math($db, $matches[1]),
         $method === 'POST' &&
+            preg_match('#^/api/v1/students/([0-9a-f-]{36})/pilot-content/russian-grade-4$#', $path, $matches) === 1
+            => PilotContentApi::installGrade4Russian($db, $matches[1]),
+        $method === 'POST' &&
+            preg_match('#^/api/v1/students/([0-9a-f-]{36})/pilot-content/english-grade-4$#', $path, $matches) === 1
+            => PilotContentApi::installGrade4English($db, $matches[1]),
+        $method === 'POST' &&
             preg_match('#^/api/v1/students/([0-9a-f-]{36})/pilot-content/david-fractions$#', $path, $matches) === 1
             => PilotContentApi::installDavidFractions($db, $matches[1]),
         $method === 'POST' &&
@@ -58,7 +64,7 @@ try {
         $method === 'DELETE' && preg_match('#^/api/v1/students/([0-9a-f-]{36})$#', $path, $matches) === 1
             => deleteStudent($db, $matches[1]),
         preg_match(
-            '#^/api/v1/(student/lessons/[0-9a-f-]{36}/ai-hints|lessons/[0-9a-f-]{36}/ai-quiz-drafts|ai-quiz-drafts/[0-9a-f-]{36}/approve)$#',
+            '#^/api/v1/(student/lessons/[0-9a-f-]{36}/ai-(hints|review)|lessons/[0-9a-f-]{36}/ai-quiz-drafts|ai-quiz-drafts/[0-9a-f-]{36}/approve)$#',
             $path,
         ) === 1
             => AiApi::dispatch($db, $method, $path),

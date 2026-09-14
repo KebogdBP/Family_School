@@ -147,6 +147,11 @@ export type PilotContentResult = {
 }
 export const installDavidGrade4Math = (studentId: string) =>
   api<PilotContentResult>(`/students/${studentId}/pilot-content/david-math-grade-4`, { method: 'POST' })
+export const installGrade4Russian = (studentId: string) =>
+  api<PilotContentResult>(`/students/${studentId}/pilot-content/russian-grade-4`, { method: 'POST' })
+
+export const installGrade4English = (studentId: string) =>
+  api<PilotContentResult>(`/students/${studentId}/pilot-content/english-grade-4`, { method: 'POST' })
 export const installDavidFractions = (studentId: string) =>
   api<PilotContentResult>(`/students/${studentId}/pilot-content/david-fractions`, { method: 'POST' })
 export const installSaraFractions = (studentId: string) =>

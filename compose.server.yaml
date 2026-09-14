@@ -1,0 +1,56 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    env_file: .env.server
+    environment:
+      MYSQL_DATABASE: homeedu
+      MYSQL_USER: homeedu
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - homeedu_mysql:/var/lib/mysql
+    healthcheck:
+      test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    mem_limit: 1g
+    logging:
+      options:
+        max-size: 10m
+        max-file: '3'
+
+  api:
+    build: ./apps/api
+    restart: unless-stopped
+    env_file: .env.server
+    environment:
+      APP_ENV: production
+      APP_URL: http://192.168.1.102
+      SESSION_COOKIE: homeedu_session
+      SESSION_COOKIE_SECURE: 'false'
+      SESSION_TTL_HOURS: 168
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: homeedu
+      DB_USER: homeedu
+      DB_PASSWORD: ${DB_PASSWORD}
+      UPLOADS_PATH: /var/www/html/storage/uploads
+      AI_PROVIDER: disabled
+    ports:
+      - '127.0.0.1:8080:80'
+    volumes:
+      - homeedu_uploads:/var/www/html/storage/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+    mem_limit: 512m
+    logging:
+      options:
+        max-size: 10m
+        max-file: '3'
+
+volumes:
+  homeedu_mysql:
+  homeedu_uploads:

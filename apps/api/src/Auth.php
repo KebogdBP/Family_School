@@ -8,6 +8,12 @@ use PDO;
 
 final class Auth
 {
+    private static function secureCookie(): bool
+    {
+        $default = Env::get('APP_ENV', 'production') === 'production' ? 'true' : 'false';
+        return filter_var(Env::get('SESSION_COOKIE_SECURE', $default), FILTER_VALIDATE_BOOL);
+    }
+
     /** @return array<string, mixed> */
     public static function requireRole(PDO $db, string $requiredRole): array
     {
@@ -69,7 +75,7 @@ final class Auth
         setcookie(Env::get('SESSION_COOKIE', 'homeedu_session'), $token, [
             'expires' => $expiresAt->getTimestamp(),
             'path' => '/',
-            'secure' => Env::get('APP_ENV', 'production') === 'production',
+            'secure' => self::secureCookie(),
             'httponly' => true,
             'samesite' => 'Strict',
         ]);
@@ -88,7 +94,7 @@ final class Auth
         setcookie($cookieName, '', [
             'expires' => time() - 3600,
             'path' => '/',
-            'secure' => Env::get('APP_ENV', 'production') === 'production',
+            'secure' => self::secureCookie(),
             'httponly' => true,
             'samesite' => 'Strict',
         ]);

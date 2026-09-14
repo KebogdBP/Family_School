@@ -10,7 +10,17 @@ final class PilotContentApi
 {
     public static function installDavidGrade4Math(PDO $db, string $studentId): never
     {
-        self::installSections($db, $studentId, 4, 'david-math-grade-4-2026-v1', Grade4MathContent::sections());
+        self::installSections($db, $studentId, 4, 'david-math-grade-4-2026-v1', Grade4MathContent::sections(), 'Математика', '#2563EB');
+    }
+
+    public static function installGrade4Russian(PDO $db, string $studentId): never
+    {
+        self::installSections($db, $studentId, 4, 'russian-grade-4-2026-v1', Grade4RussianContent::sections(), 'Русский язык', '#DC2626');
+    }
+
+    public static function installGrade4English(PDO $db, string $studentId): never
+    {
+        self::installSections($db, $studentId, 4, 'english-grade-4-2026-v1', Grade4EnglishContent::sections(), 'Английский язык', '#16A34A');
     }
 
     public static function installDavidFractions(PDO $db, string $studentId): never
@@ -55,7 +65,7 @@ final class PilotContentApi
                 'description' => $sectionDescription,
                 'topics' => $definitions,
             ],
-        ]);
+        ], 'Математика', '#2563EB');
     }
 
     /** @param array<int,array<string,mixed>> $sections */
@@ -65,6 +75,8 @@ final class PilotContentApi
         int $grade,
         string $routeCode,
         array $sections,
+        string $subjectTitle,
+        string $subjectColor,
     ): never {
         $session = Auth::requireRole($db, 'parent');
         $familyId = (string) $session['family_id'];
@@ -95,7 +107,7 @@ final class PilotContentApi
         }
         $db->beginTransaction();
         try {
-            $subjectId = self::subject($db, $familyId);
+            $subjectId = self::subject($db, $familyId, $subjectTitle, $subjectColor);
             $curriculumId = self::curriculum($db, $familyId, $studentId, $grade);
             $assignmentId = self::assignment($db, $familyId, $curriculumId, $subjectId);
             $positionRow = self::one(
@@ -269,20 +281,20 @@ final class PilotContentApi
         );
     }
 
-    private static function subject(PDO $db, string $familyId): string
+    private static function subject(PDO $db, string $familyId, string $title, string $color): string
     {
         $row = self::one(
             $db,
-            'SELECT id FROM subjects WHERE family_id=:family_id AND title=\'Математика\' AND deleted_at IS NULL LIMIT 1',
-            ['family_id' => $familyId],
+            'SELECT id FROM subjects WHERE family_id=:family_id AND title=:title AND deleted_at IS NULL LIMIT 1',
+            ['family_id' => $familyId, 'title' => $title],
         );
         if ($row) {
             return (string) $row['id'];
         }
         return self::insert(
             $db,
-            'INSERT INTO subjects(id,family_id,title,description,color,is_custom) VALUES(:id,:family_id,\'Математика\',\'Базовый предмет пилотных маршрутов HomeEdu.\',\'#2563EB\',FALSE)',
-            ['family_id' => $familyId],
+            'INSERT INTO subjects(id,family_id,title,description,color,is_custom) VALUES(:id,:family_id,:title,:description,:color,FALSE)',
+            ['family_id' => $familyId, 'title' => $title, 'description' => "Базовый курс «{$title}» для 4 класса.", 'color' => $color],
         );
     }
     private static function curriculum(PDO $db, string $familyId, string $studentId, int $grade): string

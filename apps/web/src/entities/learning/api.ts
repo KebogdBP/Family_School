@@ -176,3 +176,16 @@ export const requestAiHint = (lessonId: string, question: string) =>
     method: 'POST',
     body: JSON.stringify({ question }),
   })
+export const requestAiReview = (lessonId: string, answer: string) =>
+  api<{
+    review: {
+      verdict: 'correct' | 'partial' | 'incorrect' | 'manual_review'
+      score: number | null
+      feedback: string
+      nextStep: string
+    }
+    provider: 'openai' | 'fallback'
+  }>(`/student/lessons/${lessonId}/ai-review`, {
+    method: 'POST',
+    body: JSON.stringify({ answer }),
+  })
